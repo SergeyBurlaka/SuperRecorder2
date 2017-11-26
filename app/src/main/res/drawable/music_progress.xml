@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- background -->
+    <item
+        android:id="@android:id/background"
+        android:drawable="@mipmap/ic_music_progress_bg">
+    </item>
+    <!-- progress -->
+    <item android:id="@android:id/progress" android:drawable="@mipmap/ic_music_progress">
+
+    </item>
+    <!-- second progress -->
+
+    <!--<item android:id="@android:id/secondaryProgress">-->
+        <!--<clip>-->
+            <!--<nine-patch android:src="@drawable/progresspatch_blue" />-->
+        <!--</clip>-->
+    <!--</item>-->
+</layer-list>

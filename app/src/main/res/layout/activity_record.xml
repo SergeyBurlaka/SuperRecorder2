@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#01112a">
+
+    <View
+        android:id="@+id/v_status"
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:layout_alignParentTop="true" />
+
+    <RelativeLayout
+        android:id="@+id/rl_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/v_status"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@mipmap/ic_back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="《当你爱了》"
+            android:textColor="#ffffff"
+            android:textSize="16sp" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_bg"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/rl_title"
+        android:layout_marginTop="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_marginLeft="38dp"
+            android:src="@mipmap/ic_right_yellow" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="欢快愉悦"
+            android:textColor="#bbb4c2"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_duration_of_bg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="00:52"
+            android:textColor="#bbb4c2"
+            android:textSize="14sp" />
+
+        <com.kyleduo.switchbutton.SwitchButton
+            android:id="@+id/switch_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:textColor="#ffffff"
+            android:textSize="14sp"
+            app:kswBackDrawable="@drawable/selector_switch_btn_bg"
+            app:kswTextOff="已关    "
+            app:kswTextOn="    已开"
+            app:kswThumbDrawable="@mipmap/ic_switch_btn"
+            app:kswThumbHeight="22dp"
+            app:kswThumbMarginBottom="0dp"
+            app:kswThumbMarginLeft="0dp"
+            app:kswThumbMarginRight="0dp"
+            app:kswThumbMarginTop="0dp"
+            app:kswThumbWidth="22dp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1px"
+            android:layout_weight="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="38dp"
+            android:background="@drawable/white_corner"
+            android:padding="4dp"
+            android:text="更换配乐"
+            android:textColor="#c10e41"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_seek_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/ll_bg"
+        android:layout_marginTop="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="38dp"
+        android:paddingRight="38dp">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@mipmap/ic_speaker" />
+
+        <android.support.v7.widget.AppCompatSeekBar
+            android:id="@+id/bg_music_volume"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxHeight="2dp"
+            android:progress="7"
+            android:max="15"
+            android:progressDrawable="@drawable/my_seek_bar_bg"
+            android:thumb="@drawable/drawable_circle" />
+
+        <TextView
+            android:id="@+id/tv_bg_music_volume"
+            android:layout_width="30dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="#ffffff"
+            android:textSize="14sp"
+            tools:text="22" />
+    </LinearLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/ll_seek_bar"
+        android:layout_marginLeft="22dp"
+        android:layout_marginRight="22dp"
+        android:layout_marginTop="16dp"
+        android:background="@mipmap/ic_record_bg"
+        android:paddingTop="10dp">
+
+        <ImageView
+            android:id="@+id/iv_dot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:src="@drawable/red_dot" />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="10dp"
+            android:layout_toRightOf="@+id/iv_dot"
+            android:adjustViewBounds="true"
+            android:src="@mipmap/ic_rec" />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="10dp"
+            android:layout_alignParentRight="true"
+            android:adjustViewBounds="true"
+            android:src="@mipmap/ic_license" />
+
+        <TextView
+            android:id="@+id/tv_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/iv_dot"
+            android:layout_centerHorizontal="true"
+            android:text="01:49"
+            android:textColor="#333"
+            android:textSize="38sp" />
+
+        <ImageView
+            android:id="@+id/iv_mic"
+            android:layout_width="wrap_content"
+            android:layout_height="20dp"
+            android:layout_below="@+id/tv_duration"
+            android:layout_marginLeft="20dp"
+            android:adjustViewBounds="true"
+            android:src="@mipmap/ic_mic" />
+
+        <ProgressBar
+            android:id="@+id/pb_mic"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="100dp"
+            android:layout_height="20dp"
+            android:layout_below="@+id/tv_duration"
+            android:layout_toRightOf="@+id/iv_mic"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/mic_progress" />
+
+        <ProgressBar
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:id="@+id/pb_bg"
+            android:layout_width="100dp"
+            android:layout_height="20dp"
+            android:layout_alignParentRight="true"
+            android:layout_marginRight="16dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/music_progress"
+            android:layout_below="@+id/tv_duration" />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="20dp"
+            android:layout_below="@+id/tv_duration"
+            android:layout_toLeftOf="@+id/pb_bg"
+            android:adjustViewBounds="true"
+            android:src="@mipmap/ic_note" />
+
+        <com.yibogame.superrecorder.RulerView
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_below="@+id/iv_mic"
+            android:layout_marginTop="10dp" />
+    </RelativeLayout>
+
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/bg_main_bottom"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:scaleType="fitXY"
+        android:src="@mipmap/ic_dots" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:gravity="bottom|center_vertical|center_horizontal"
+        android:orientation="horizontal">
+
+        <com.yibogame.superrecorder.CustomTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/align_bottom"
+            android:gravity="center"
+            android:text="裁剪"
+            android:textColor="#ffffff"
+            app:drawableTopCompat="@mipmap/ic_cut"
+            app:drawableTopCompatSize="42dp" />
+
+        <com.yibogame.superrecorder.CustomTextView
+            android:id="@+id/ctv_record"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/align_bottom"
+            android:layout_marginLeft="@dimen/btns_left_margin"
+            android:gravity="center"
+            android:text="重录"
+            android:textColor="#ffffff"
+            app:drawableTopCompat="@mipmap/ic_record"
+            app:drawableTopCompatSize="42dp" />
+
+        <com.yibogame.superrecorder.CustomTextView
+            android:id="@+id/ctv_record_pause"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="@dimen/btns_left_margin"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="录音"
+            android:textColor="#ffffff"
+            app:drawableTopCompat="@mipmap/ic_recorder"
+            app:drawableTopCompatSize="68dp" />
+
+        <com.yibogame.superrecorder.CustomTextView
+            android:id="@+id/ctv_cut"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/align_bottom"
+            android:layout_marginLeft="@dimen/btns_left_margin"
+            android:gravity="center"
+            android:text="试听"
+            android:textColor="#ffffff"
+            app:drawableTopCompat="@mipmap/ic_play"
+            app:drawableTopCompatSize="42dp" />
+
+        <com.yibogame.superrecorder.CustomTextView
+            android:id="@+id/ctv_next"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/align_bottom"
+            android:layout_marginLeft="@dimen/btns_left_margin"
+            android:gravity="center"
+            android:text="下一步"
+            android:textColor="#ffffff"
+            app:drawableTopCompat="@mipmap/ic_save"
+            app:drawableTopCompatSize="42dp" />
+    </LinearLayout>
+</RelativeLayout>
