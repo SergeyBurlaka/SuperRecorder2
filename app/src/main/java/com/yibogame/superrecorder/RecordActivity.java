@@ -38,6 +38,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.Buffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -318,19 +320,19 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             myMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mediaPlayer) {
-                    stopMp3();
+                    LogUtils.e("MediaPlayer onCompletion!");
+//                    stopMp3();
                     bgLength = 52;
-                    if (visualizer != null) {
-                        try {
-                            visualizer.setEnabled(false);
-                        } catch (Exception e) {
-                            visualizer.release();
-                        }
-
-                    }
-                    stopTimer();
-                    playMp3();
-
+                    currBgLength = bgLength;
+//                    if (visualizer != null) {
+//                        try {
+//                            visualizer.setEnabled(false);
+//                        } catch (Exception e) {
+//                            visualizer.release();
+//                        }
+//                    }
+//                    stopTimer();
+//                    playMp3();
                 }
             });
             visualizer = new Visualizer(myMediaPlayer.getAudioSessionId());
@@ -346,7 +348,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     updateVisualizer(bytes);
                 }
             }, Visualizer.getMaxCaptureRate() / 2, false, true);
-
+            myMediaPlayer.setLooping(true);
             myMediaPlayer.prepare();
             myMediaPlayer.seekTo(myMediaPlayerCurrentPosition);
             myMediaPlayer.start();
@@ -358,7 +360,6 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             e.printStackTrace();
         }
     }
-
 
 
     private void stopRecordBg() {
@@ -415,6 +416,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                 tvBGDuration.setText("00:00");
                 bgLength = 52;
                 currBgLength = bgLength;
+                startTimer();
             }
         };
 
@@ -494,7 +496,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             file = new File(folderPath + "app_log.txt");
         } else {
             file = new File(folderPath + fileName);
-            ToastUtils.showLong("file.path=" + file.getAbsolutePath());
+//            ToastUtils.showLong("file.path=" + file.getAbsolutePath());
         }
         RandomAccessFile raf = null;
         FileOutputStream out = null;
@@ -547,7 +549,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
     @Override
     public void startRecord(int type) {
-        if (type == IRecordListener.TYPE_BG){
+        if (type == IRecordListener.TYPE_BG) {
             mRecorderBg = new Recorder(
                     MediaRecorder.AudioSource.DEFAULT,
                     512,
@@ -560,7 +562,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             });
             mRecorderBg.startRecording();
             isBgRecording = true;
-        }else if(type == IRecordListener.TYPE_VOICE){
+        } else if (type == IRecordListener.TYPE_VOICE) {
             mRecorderVoice = new Recorder(
                     MediaRecorder.AudioSource.MIC,
                     512,
@@ -592,5 +594,6 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     public void stopRecord(int type) {
 
     }
+
 }
 
