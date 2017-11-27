@@ -10,10 +10,10 @@ import android.widget.TextView;
 import java.io.File;
 import java.io.FileInputStream;
 
-import cn.gavinliu.android.ffmpeg.box.FFmpegBox;
-import cn.gavinliu.android.ffmpeg.box.commands.BaseCommand;
-import cn.gavinliu.android.ffmpeg.box.commands.Command;
-import cn.gavinliu.android.ffmpeg.box.commands.CutGifCommand;
+//import cn.gavinliu.android.ffmpeg.box.FFmpegBox;
+//import cn.gavinliu.android.ffmpeg.box.commands.BaseCommand;
+//import cn.gavinliu.android.ffmpeg.box.commands.Command;
+//import cn.gavinliu.android.ffmpeg.box.commands.CutGifCommand;
 
 public class MainActivity extends BaseActivity {
 

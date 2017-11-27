@@ -108,14 +108,11 @@ public class Recorder {
         mAudioRecord.startRecording();
         isRecording = true;
         if (mThreadVolume == null) {
-            mThreadVolume = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    while (isRecording) {
-                        int readSize = mAudioRecord.read(mPCMBuffer, 0, bufferSizeInBytes);
-                        if (readSize > 0) {
-                            calculateRealVolume(mPCMBuffer, readSize);
-                        }
+            mThreadVolume = new Thread(() -> {
+                while (isRecording) {
+                    int readSize = mAudioRecord.read(mPCMBuffer, 0, bufferSizeInBytes);
+                    if (readSize > 0) {
+                        calculateRealVolume(mPCMBuffer, readSize);
                     }
                 }
             });

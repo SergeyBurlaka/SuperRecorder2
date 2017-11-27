@@ -27,6 +27,7 @@
         <activity android:name=".FilesActivity" />
         <activity android:name=".SettingAudioActivity" />
         <activity android:name=".CutActivity" />
+        <activity android:name=".PCMPlayerActivity" />
     </application>
 
 </manifest>
