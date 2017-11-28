@@ -10,6 +10,7 @@ import com.jakewharton.rxbinding2.view.RxView;
 import com.yibogame.superrecorder.cmd.ChangeVolumeCmd;
 import com.yibogame.superrecorder.cmd.ConcatCmd;
 import com.yibogame.superrecorder.cmd.CutCmd;
+import com.yibogame.superrecorder.cmd.MixCmd;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -76,6 +77,13 @@ public class ComplexActivity extends AppCompatActivity {
                                 contact(list,base+"/concat.mp3");
                                 return "contact.mp3";
                             })
+                            .map(s -> {
+                                List<String> list = new ArrayList<>();
+                                list.add(base+"/split1_1.mp3");
+                                list.add(base+"/split2_2.mp3");
+                                mix(list,1,base+"/mix.mp3");
+                                return "success!";
+                            })
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(new Subscriber<String>() {
                                 @Override
@@ -126,6 +134,18 @@ public class ComplexActivity extends AppCompatActivity {
         }
         Command command = builder.setOutputFile(outputFile).build();
         LogUtils.d("contact cmd=" + command.getCommand());
+        int ret = FFmpegBox.getInstance().execute(command);
+    }
+
+    public void mix(List<String> list,int whichOne,String outputFile){
+        MixCmd.Builder builder = new MixCmd.Builder();
+        for (String s : list) {
+            builder.addInputs(s);
+        }
+        Command command = builder.setDurationWhichOne(whichOne)
+                .setOutputFile(outputFile)
+                .build();
+        LogUtils.d("mix cmd=" + command.getCommand());
         int ret = FFmpegBox.getInstance().execute(command);
     }
 
