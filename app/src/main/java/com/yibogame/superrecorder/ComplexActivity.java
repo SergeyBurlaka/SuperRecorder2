@@ -8,7 +8,7 @@ import android.support.v7.app.AppCompatActivity;
 import com.blankj.utilcode.util.LogUtils;
 import com.jakewharton.rxbinding2.view.RxView;
 import com.yibogame.superrecorder.cmd.ChangeVolumeCmd;
-import com.yibogame.superrecorder.cmd.ContactCmd;
+import com.yibogame.superrecorder.cmd.ConcatCmd;
 import com.yibogame.superrecorder.cmd.CutCmd;
 
 import java.util.ArrayList;
@@ -23,7 +23,6 @@ import cn.gavinliu.android.ffmpeg.box.commands.Command;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 
@@ -121,7 +120,7 @@ public class ComplexActivity extends AppCompatActivity {
     }
 
     public void contact(List<String> list,String outputFile){
-        ContactCmd.Builder builder = new ContactCmd.Builder();
+        ConcatCmd.Builder builder = new ConcatCmd.Builder();
         for (String s : list) {
             builder.addInputs(s);
         }
