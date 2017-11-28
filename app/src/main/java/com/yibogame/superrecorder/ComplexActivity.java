@@ -47,34 +47,34 @@ public class ComplexActivity extends AppCompatActivity {
         RxView.clicks(findViewById(R.id.btn_split))
                 .throttleFirst(1, TimeUnit.SECONDS)
                 .subscribe(o -> {
-                    Observable.just(base + "/xjhw.mp3")
+                    Observable.just(base + "/jmgc.mp3")
                             .subscribeOn(Schedulers.io())
-//                            .map(s -> {
-//                                LogUtils.w("getStringTime(1)=" + getStringTime(1) + ",getStringTime(1 + 10)=" + getStringTime(1 + 10));
-//                                split(s, base + "/split1.mp3", getStringTime(1), getStringTime(1 + 10));
-//                                return base + "/split1.mp3";
-//                            })
-//                            .map(s -> {
-//                                setVolume(s, base + "/split1_1.mp3", 3.5f);
-//                                return base + "/split1_1.mp3";
-//                            })
-//                            .map(s->{
-//                                return base + "/xjhw.mp3";
-//                            })
-//                            .map(s -> {
-//                                LogUtils.w("getStringTime(65)=" + getStringTime(65) + ",getStringTime(65 + 10)=" + getStringTime(65 + 10));
-//                                split(s, base + "/split2.mp3", getStringTime(65), getStringTime(65 + 10));
-//                                return base + "/split2.mp3";
-//                            })
-//                            .map(s -> {
-//                                setVolume(s, base + "/split2_2.mp3", 2.5f);
-//                                return base + "/split2_2.mp3";
-//                            })
+                            .map(s -> {
+                                LogUtils.w("getStringTime(1)=" + getStringTime(1) + ",getStringTime(1 + 10)=" + getStringTime(1 + 10));
+                                split(s, base + "/split1.mp3", getStringTime(0), getStringTime(10));
+                                return base + "/split1.mp3";
+                            })
+                            .map(s -> {
+                                setVolume(s, base + "/split1_1.mp3", 3.5f);
+                                return base + "/split1_1.mp3";
+                            })
+                            .map(s->{
+                                return base + "/jmgc.mp3";
+                            })
+                            .map(s -> {
+                                LogUtils.w("getStringTime(65)=" + getStringTime(65) + ",getStringTime(65 + 10)=" + getStringTime(65 + 10));
+                                split(s, base + "/split2.mp3", getStringTime(65), getStringTime(10));
+                                return base + "/split2.mp3";
+                            })
+                            .map(s -> {
+                                setVolume(s, base + "/split2_2.mp3", 2.5f);
+                                return base + "/split2_2.mp3";
+                            })
                             .map(s -> {
                                 List<String> list = new ArrayList<>();
                                 list.add(base+"/split1_1.mp3");
                                 list.add(base+"/split2_2.mp3");
-                                contact(list,"contact.mp3");
+                                contact(list,base+"/concat.mp3");
                                 return "contact.mp3";
                             })
                             .observeOn(AndroidSchedulers.mainThread())
