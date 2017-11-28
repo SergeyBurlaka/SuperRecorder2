@@ -1,30 +1,42 @@
 package com.yibogame.superrecorder;
 
-import android.content.res.AssetFileDescriptor;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 
 import com.blankj.utilcode.util.LogUtils;
 import com.jakewharton.rxbinding2.view.RxView;
+import com.yibogame.superrecorder.cmd.ChangeVolumeCmd;
+import com.yibogame.superrecorder.cmd.ContactCmd;
+import com.yibogame.superrecorder.cmd.CutCmd;
 
-import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import cn.gavinliu.android.ffmpeg.box.FFmpegBox;
-import cn.gavinliu.android.ffmpeg.box.commands.BaseCommand;
+import cn.gavinliu.android.ffmpeg.box.commands.Command;
+import rx.Observable;
+import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 
 
 /**
- * Created by parcool on 2017/11/25.
+ * @author parcool
+ * @date 2017/11/25
  */
 
 public class ComplexActivity extends AppCompatActivity {
 
     private static String TAG = MainActivity.class.getSimpleName();
+    private List<Map<String, String>> listOperationRecord = new ArrayList<>();
+    private String base = Environment.getExternalStorageDirectory().getPath();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -32,71 +44,90 @@ public class ComplexActivity extends AppCompatActivity {
         setContentView(R.layout.activity_complex);
 
 
-        String base = Environment.getExternalStorageDirectory().getPath();
-//        String a = String.format("ffmpeg -i " + base + "/jmgc.mp3 -i " + base + "/rwlznsb.mp3 -filter_complex amix=inputs=2:duration=first:dropout_transition=2 -f mp3 " + base + "/output.mp3");
-//        BaseCommand baseCommand = new BaseCommand(a) {
-//            @Override
-//            public String getCommand() {
-//                return super.getCommand();
-//            }
-//        };
-//
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                int ret = FFmpegBox.getInstance().execute(baseCommand);
-//                Log.d(TAG, "the ret=" + ret+"!!!");
-//            }
-//        }).start();
-
-//        String path = "file:///android_asset/bg_music_1.mp3";
-        File file = new File(base + "/rwlznsb.mp3");
-        if (file.exists()) {
-            LogUtils.d("文件是存在的啊~");
-        }
         RxView.clicks(findViewById(R.id.btn_split))
+                .throttleFirst(1, TimeUnit.SECONDS)
                 .subscribe(o -> {
-                    split(base + "/output.mp3", base + "/split1.mp3", 0, 10);
+                    Observable.just(base + "/xjhw.mp3")
+                            .subscribeOn(Schedulers.io())
+//                            .map(s -> {
+//                                LogUtils.w("getStringTime(1)=" + getStringTime(1) + ",getStringTime(1 + 10)=" + getStringTime(1 + 10));
+//                                split(s, base + "/split1.mp3", getStringTime(1), getStringTime(1 + 10));
+//                                return base + "/split1.mp3";
+//                            })
+//                            .map(s -> {
+//                                setVolume(s, base + "/split1_1.mp3", 3.5f);
+//                                return base + "/split1_1.mp3";
+//                            })
+//                            .map(s->{
+//                                return base + "/xjhw.mp3";
+//                            })
+//                            .map(s -> {
+//                                LogUtils.w("getStringTime(65)=" + getStringTime(65) + ",getStringTime(65 + 10)=" + getStringTime(65 + 10));
+//                                split(s, base + "/split2.mp3", getStringTime(65), getStringTime(65 + 10));
+//                                return base + "/split2.mp3";
+//                            })
+//                            .map(s -> {
+//                                setVolume(s, base + "/split2_2.mp3", 2.5f);
+//                                return base + "/split2_2.mp3";
+//                            })
+                            .map(s -> {
+                                List<String> list = new ArrayList<>();
+                                list.add(base+"/split1_1.mp3");
+                                list.add(base+"/split2_2.mp3");
+                                contact(list,"contact.mp3");
+                                return "contact.mp3";
+                            })
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe(new Subscriber<String>() {
+                                @Override
+                                public void onCompleted() {
+
+                                }
+
+                                @Override
+                                public void onError(Throwable e) {
+
+                                }
+
+                                @Override
+                                public void onNext(String s) {
+                                    LogUtils.i("成功了？" + s);
+                                }
+                            });
                 });
 
     }
 
-    public static void split(String inputfile, String outputfile, int start, int duration) {
+    public void split(String inputfile, String outputfile, String start, String endTime) {
+        CutCmd.Builder cutCmdBuilder = new CutCmd.Builder();
+        Command cutCmd = cutCmdBuilder.setInputFile(inputfile)
+                .setOutputFile(outputfile)
+                .setStartTime(start)
+                .setEndTime(endTime)
+                .build();
+        int ret = FFmpegBox.getInstance().execute(cutCmd);
+        LogUtils.d("cmd=" + cutCmd.getCommand() + ",ret=" + ret);
+    }
 
-        try {
-//            List<String> cmd = new ArrayList<String>();
-            StringBuilder cmd = new StringBuilder();
-            cmd.append("ffmpeg -y ");
-            cmd.append("-i");
-            cmd.append(" ");
-            cmd.append(inputfile);
-            cmd.append(" ");
-            cmd.append("-ss");
-            cmd.append(" ");
-//            cmd.append(getStringTime(start));
-            cmd.append("00:00:00");
-            cmd.append(" ");
-            cmd.append("-t");
-            cmd.append(" ");
-            cmd.append("00:00:12");
-            cmd.append(" ");
-            cmd.append("-acodec copy");
-            cmd.append(" ");
-//            cmd.append(String.valueOf(duration));
-            cmd.append(outputfile);
-            BaseCommand baseCommand = new BaseCommand(cmd.toString()) {
-                @Override
-                public String getCommand() {
-                    return super.getCommand();
-                }
-            };
-            int ret = FFmpegBox.getInstance().execute(baseCommand);
-            LogUtils.d("cmd=" + baseCommand.getCommand() + ",ret=" + ret);
-//            exec(cmd);
-        } catch (Exception e) {
-//            logger.error("音频切片错误:", e);
-            LogUtils.e("音频切片错误:" + e.getMessage());
+    public void setVolume(String inputFile, String outputFile, float times) {
+        ChangeVolumeCmd.Builder builder = new ChangeVolumeCmd.Builder();
+        Command command = builder.setInputFile(inputFile)
+                .setOutputFile(outputFile)
+                .setTimes(times)
+                .build();
+        LogUtils.d("setVolume cmd=" + command.getCommand());
+        int ret = FFmpegBox.getInstance().execute(command);
+        LogUtils.d("ret=" + ret);
+    }
+
+    public void contact(List<String> list,String outputFile){
+        ContactCmd.Builder builder = new ContactCmd.Builder();
+        for (String s : list) {
+            builder.addInputs(s);
         }
+        Command command = builder.setOutputFile(outputFile).build();
+        LogUtils.d("contact cmd=" + command.getCommand());
+        int ret = FFmpegBox.getInstance().execute(command);
     }
 
     /**
@@ -106,7 +137,15 @@ public class ComplexActivity extends AppCompatActivity {
         int h = time / 3600;
         int m = (time % 3600) / 60;
         int s = (time % 3600) % 60;
-        return String.format("%02d:%02d:%02d", h, m, s);
+        return String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s);
     }
 
+    private void getMockOperationRecord() {
+        List<Map<String, String>> listOperationRecord = new ArrayList<>();
+        Map<String, String> map1 = new HashMap<>(4);
+        map1.put("music", base + "/xjhw.mp3");
+        map1.put("start", "0");
+        map1.put("end", "10");
+        map1.put("volume", "0.5f");
+    }
 }
