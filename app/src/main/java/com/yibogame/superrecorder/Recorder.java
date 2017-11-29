@@ -69,35 +69,35 @@ public class Recorder {
             byteBuffer = ByteBuffer.allocate(period);
         }
 
-//        mAudioRecord.setRecordPositionUpdateListener(new AudioRecord.OnRecordPositionUpdateListener() {
-//            @Override
-//            public void onMarkerReached(AudioRecord recorder) {
-//
-//            }
-//
-//            @Override
-//            public void onPeriodicNotification(AudioRecord recorder) {
-//                if (l != null)
-//                    l.onFrames(recorder);
-//
-//                if (listener == null) {
-//                    return;
-//                }
-//                if (listener instanceof OnShortBufferDataChangeListener) {
-//                    int position = read(shortBuffer.array());
-//                    ((OnShortBufferDataChangeListener) listener).onDataChange(position, shortBuffer);
-//                } else if (listener instanceof OnByteBufferDataChangeListener) {
-//                    int position = read(byteBuffer.array());
-//                    ((OnByteBufferDataChangeListener) listener).onDataChange(position, byteBuffer);
-//                }
-//
-//            }
-//        });
-        mPCMBuffer = new short[bufferSizeInBytes];
+        mAudioRecord.setRecordPositionUpdateListener(new AudioRecord.OnRecordPositionUpdateListener() {
+            @Override
+            public void onMarkerReached(AudioRecord recorder) {
+
+            }
+
+            @Override
+            public void onPeriodicNotification(AudioRecord recorder) {
+                if (l != null) {
+                    l.onFrames(recorder);
+                }
+                if (listener == null) {
+                    return;
+                }
+                if (listener instanceof OnShortBufferDataChangeListener) {
+                    int position = read(shortBuffer.array());
+                    ((OnShortBufferDataChangeListener) listener).onDataChange(position, shortBuffer);
+                } else if (listener instanceof OnByteBufferDataChangeListener) {
+                    int position = read(byteBuffer.array());
+                    ((OnByteBufferDataChangeListener) listener).onDataChange(position, byteBuffer);
+                }
+
+            }
+        });
+        mPCMBuffer = new byte[bufferSizeInBytes];
         LogUtils.d("recorder inited.");
     }
 
-    private short[] mPCMBuffer;
+    private byte[] mPCMBuffer;
     private boolean isRecording = false;
 
     public void startRecording() {
@@ -122,7 +122,7 @@ public class Recorder {
 
     Object mLock;
 
-    private void calculateRealVolume(short[] mPCMBuffer, int readSize) {
+    private void calculateRealVolume(byte[] mPCMBuffer, int readSize) {
         long v = 0;
         // 将 buffer 内容取出，进行平方和运算
         for (int i = 0; i < mPCMBuffer.length; i++) {
@@ -150,8 +150,9 @@ public class Recorder {
             LogUtils.e("mAudioRecord is null!");
             return;
         }
-        if (mAudioRecord.getRecordingState() == AudioRecord.RECORDSTATE_STOPPED)
+        if (mAudioRecord.getRecordingState() == AudioRecord.RECORDSTATE_STOPPED) {
             return;
+        }
         mAudioRecord.stop();
         isRecording = false;
     }
@@ -197,13 +198,13 @@ public class Recorder {
     private static int[] mSampleRates = new int[]{8000, 11025, 22050, 44100};
 
     public AudioRecord findAudioRecord(int audioSource) {
-        int bufferSizeTemp = AudioRecord.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_8BIT);
+        int bufferSizeTemp = AudioRecord.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         if (bufferSizeTemp != AudioRecord.ERROR_BAD_VALUE) {
+            AudioRecord recorderTemp = new AudioRecord(audioSource, 44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSizeTemp);
             this.sampleRateInHz = 44100;
             this.channelConfig = AudioFormat.CHANNEL_IN_MONO;
-            this.audioFormat = AudioFormat.ENCODING_PCM_8BIT;
+            this.audioFormat = AudioFormat.ENCODING_PCM_16BIT;
             this.bufferSizeInBytes = bufferSizeTemp;
-            AudioRecord recorderTemp = new AudioRecord(audioSource, 44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_8BIT, bufferSizeTemp);
             LogUtils.i("default config is test ok,so return it.");
             return recorderTemp;
         }

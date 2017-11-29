@@ -32,12 +32,14 @@ import com.tbruyelle.rxpermissions.RxPermissions;
 import com.yibogame.superrecorder.interfaces.IBufferDataChangeInterface;
 import com.yibogame.superrecorder.interfaces.IOnRecordingListener;
 import com.yibogame.superrecorder.interfaces.IRecordListener;
+import com.yibogame.superrecorder.interfaces.OnShortBufferDataChangeListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.Buffer;
+import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -56,9 +58,9 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     private static final int RECORD_STATUS_NONE = 0, RECORD_STATUS_RECORDING = 1, RECORD_STATUS_PAUSE = 2;
     private RxPermissions rxPermissions;
     private Recorder mRecorderVoice, mRecorderBg;
-    private IBufferDataChangeInterface interfaceVoice = new IBufferDataChangeInterface() {
+    private OnShortBufferDataChangeListener interfaceVoice = new OnShortBufferDataChangeListener() {
         @Override
-        public void onDataChange(int position, Buffer buffer) {
+        public void onDataChange(int position, ShortBuffer shortBuffer) {
             LogUtils.d("position=" + position);
         }
     };
@@ -106,6 +108,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
             }
         });
+
         tvBgMusicVolume.setText(String.valueOf(mACSBMusicVolume.getProgress()));
         RxView.clicks(findViewById(R.id.ctv_next))
                 .throttleFirst(500, TimeUnit.MILLISECONDS)
@@ -221,8 +224,6 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                             }
                         }
                 );
-
-
     }
 
 
@@ -558,8 +559,8 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     interfaceVoice);
             mRecorderBg.setOnRecordingListener(new IOnRecordingListener() {
                 @Override
-                public void onDataReceived(short[] mPCMBuffer, int readSize, double volume) {
-                    writeFileToSDCard(toByteArray(mPCMBuffer), base, "temp_bg.pcm", true, false);
+                public void onDataReceived(byte[] mPCMBuffer, int readSize, double volume) {
+                    writeFileToSDCard(mPCMBuffer, base, "temp_bg.pcm", true, false);
                 }
             });
             mRecorderBg.startRecording();
@@ -568,7 +569,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             mRecorderVoice = new Recorder(
                     MediaRecorder.AudioSource.MIC,
                     512,
-                    interfaceVoice);
+                    null);
             mRecorderVoice.setOnPeriodInFramesChangeListener(new Recorder.OnPeriodInFramesChangeListener() {
                 @Override
                 public void onFrames(AudioRecord record) {
@@ -577,10 +578,10 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             });
             mRecorderVoice.setOnRecordingListener(new IOnRecordingListener() {
                 @Override
-                public void onDataReceived(short[] mPCMBuffer, int readSize, double volume) {
+                public void onDataReceived(byte[] mPCMBuffer, int readSize, double volume) {
                     LogUtils.d("volume=" + volume);
                     pbMic.setProgress((int) volume);
-                    writeFileToSDCard(toByteArray(mPCMBuffer), base, "temp_mic.pcm", true, false);
+                    writeFileToSDCard(mPCMBuffer, base, "temp_mic.pcm", true, false);
                 }
             });
             mRecorderVoice.startRecording();

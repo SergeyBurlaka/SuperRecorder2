@@ -11,6 +11,7 @@ import com.yibogame.superrecorder.cmd.ChangeVolumeCmd;
 import com.yibogame.superrecorder.cmd.ConcatCmd;
 import com.yibogame.superrecorder.cmd.CutCmd;
 import com.yibogame.superrecorder.cmd.MixCmd;
+import com.yibogame.superrecorder.cmd.PCM2Mp3Cmd;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -77,11 +78,15 @@ public class ComplexActivity extends AppCompatActivity {
 //                                contact(list,base+"/concat.mp3");
 //                                return "contact.mp3";
 //                            })
+//                            .map(s -> {
+//                                List<String> list = new ArrayList<>();
+//                                list.add(base+"/temp_mic.pcm");
+//                                list.add(base+"/split2_2.mp3");
+//                                mix(list,1,base+"/mix.mp3");
+//                                return "success!";
+//                            })
                             .map(s -> {
-                                List<String> list = new ArrayList<>();
-                                list.add(base+"/temp_mic.pcm");
-                                list.add(base+"/split2_2.mp3");
-                                mix(list,1,base+"/mix.mp3");
+                                cast(base+"/temp_mic.pcm",base+"/temp_mic.mp3");
                                 return "success!";
                             })
                             .observeOn(AndroidSchedulers.mainThread())
@@ -113,7 +118,7 @@ public class ComplexActivity extends AppCompatActivity {
                 .setEndTime(endTime)
                 .build();
         int ret = FFmpegBox.getInstance().execute(cutCmd);
-        LogUtils.d("cmd=" + cutCmd.getCommand() + ",ret=" + ret);
+        LogUtils.d("split cmd=" + cutCmd.getCommand() + ",ret=" + ret);
     }
 
     public void setVolume(String inputFile, String outputFile, float times) {
@@ -146,6 +151,17 @@ public class ComplexActivity extends AppCompatActivity {
                 .setOutputFile(outputFile)
                 .build();
         LogUtils.d("mix cmd=" + command.getCommand());
+        int ret = FFmpegBox.getInstance().execute(command);
+    }
+
+    public void cast(String inputFile,String outputFile){
+        PCM2Mp3Cmd.Builder builder = new PCM2Mp3Cmd.Builder();
+        Command command = builder.setChannel(1)
+                .setInputFile(inputFile)
+                .setOutputFile(outputFile)
+                .setRate(44100)
+                .build();
+        LogUtils.d("cast cmd=" + command.getCommand());
         int ret = FFmpegBox.getInstance().execute(command);
     }
 

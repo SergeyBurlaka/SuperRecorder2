@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ShortBuffer;
 
 /**
  * @author tanyi
@@ -47,7 +48,7 @@ public class PCMPlayerActivity extends BaseActivity {
                         @Override
                         public void run() {
                             try {
-                                pcmPlayer.write(readSDFile(tempPath));
+                                pcmPlayer.write(readSDFile(tempPath,pcmPlayer.getBufferSize()));
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
@@ -61,7 +62,7 @@ public class PCMPlayerActivity extends BaseActivity {
                             bundle.getInt("bgChannelConfig"),
                             bundle.getInt("bgAudioFormat"));
                     String tempPath = base + "/temp_bg.pcm";
-                    pcmPlayer.write(readSDFile(tempPath));
+                    pcmPlayer.write(readSDFile(tempPath,pcmPlayer.getBufferSize()));
                 });
     }
 
@@ -71,13 +72,17 @@ public class PCMPlayerActivity extends BaseActivity {
      * @return
      * @throws IOException
      */
-    public byte[] readSDFile(String fileName) throws IOException {
+    public byte[] readSDFile(String fileName,int bufferSizeInBytes) throws IOException {
         byte[] bytesForReturn = null;
-        byte[] bytes = new byte[1024];
+        byte[] bytes = new byte[bufferSizeInBytes];
         ByteArrayOutputStream arrayOutputStream = null;
+        int byteread=0;
         try {
             FileInputStream inputStream = new FileInputStream(fileName);
-
+//            while ((byteread = inputStream.read(bytes)) != -1) {
+//                System.out.write(bytes, 0, byteread);
+//                System.out.flush();
+//            }
             arrayOutputStream = new ByteArrayOutputStream();
             while (inputStream.read(bytes) != -1) {
                 arrayOutputStream.write(bytes, 0, bytes.length);
@@ -85,7 +90,6 @@ public class PCMPlayerActivity extends BaseActivity {
             bytesForReturn = arrayOutputStream.toByteArray();
             inputStream.close();
             arrayOutputStream.close();
-
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {

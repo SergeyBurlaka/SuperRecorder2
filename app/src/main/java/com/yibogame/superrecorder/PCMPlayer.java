@@ -6,6 +6,10 @@ import android.media.AudioTrack;
 
 import com.blankj.utilcode.util.LogUtils;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Created by tanyi on 2017/11/27.
  */
@@ -21,7 +25,7 @@ public class PCMPlayer {
     // 默认
     private int sampleRate = 44100;                          // 采样率  4000 每秒钟采集4000个点
     private int channel = AudioFormat.CHANNEL_OUT_MONO;     // 声道个数 1 单声道
-    private int format = AudioFormat.ENCODING_PCM_8BIT;     // 每个采样点8bit量化 采样精度
+    private int format = AudioFormat.ENCODING_PCM_16BIT;     // 每个采样点8bit量化 采样精度
 
 //    public PCMPlayer() {
 //        initPlay();
@@ -30,7 +34,7 @@ public class PCMPlayer {
     public PCMPlayer(int sampleRate, int channel, int format) {
         this.sampleRate = sampleRate == 0 ? 44100 : sampleRate;
         this.channel = channel == 0 ? AudioFormat.CHANNEL_OUT_MONO : channel;
-        this.format = format == 0 ? AudioFormat.ENCODING_PCM_8BIT : format;
+        this.format = format == 0 ? AudioFormat.ENCODING_PCM_16BIT : format;
         initPlay();
     }
 
@@ -67,15 +71,12 @@ public class PCMPlayer {
          *   这种方法对于铃声等内存占用较小，延时要求较高的声音来说很适用。
          */
         try {
-            audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate, AudioFormat.CHANNEL_OUT_MONO, format,
-                    bufferSize, AudioTrack.MODE_STREAM);
+            LogUtils.i("sampleRate=" + sampleRate + ",channel=" + channel + ",format=" + format);
+            audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate, channel, format, bufferSize, AudioTrack.MODE_STREAM);
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
-            LogUtils.d("sampleRate=" + sampleRate + ",channel=" + channel + ",format=" + format);
             return;
         }
-
-
         // 播放 后续你直接write数据就行
         audioTrack.play();
     }
