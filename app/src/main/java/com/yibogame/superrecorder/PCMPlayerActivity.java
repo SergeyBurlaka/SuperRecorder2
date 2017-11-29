@@ -43,7 +43,17 @@ public class PCMPlayerActivity extends BaseActivity {
                             bundle.getInt("voiceChannelConfig"),
                             bundle.getInt("voiceAudioFormat"));
                     String tempPath = base + "/temp_mic.pcm";
-                    pcmPlayer.write(readSDFile(tempPath));
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                pcmPlayer.write(readSDFile(tempPath));
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }).start();
+
                 });
         RxView.clicks(findViewById(R.id.btn_play_bg))
                 .subscribe(o -> {

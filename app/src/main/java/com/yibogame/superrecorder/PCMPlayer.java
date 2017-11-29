@@ -19,7 +19,7 @@ public class PCMPlayer {
     }
 
     // 默认
-    private int sampleRate = 4000;                          // 采样率  4000 每秒钟采集4000个点
+    private int sampleRate = 44100;                          // 采样率  4000 每秒钟采集4000个点
     private int channel = AudioFormat.CHANNEL_OUT_MONO;     // 声道个数 1 单声道
     private int format = AudioFormat.ENCODING_PCM_8BIT;     // 每个采样点8bit量化 采样精度
 
@@ -28,9 +28,9 @@ public class PCMPlayer {
 //    }
 
     public PCMPlayer(int sampleRate, int channel, int format) {
-        this.sampleRate = sampleRate;
-        this.channel = channel;
-        this.format = format;
+        this.sampleRate = sampleRate == 0 ? 44100 : sampleRate;
+        this.channel = channel == 0 ? AudioFormat.CHANNEL_OUT_MONO : channel;
+        this.format = format == 0 ? AudioFormat.ENCODING_PCM_8BIT : format;
         initPlay();
     }
 
@@ -71,7 +71,7 @@ public class PCMPlayer {
                     bufferSize, AudioTrack.MODE_STREAM);
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
-            LogUtils.d("sampleRate="+sampleRate+",channel="+channel+",format="+format);
+            LogUtils.d("sampleRate=" + sampleRate + ",channel=" + channel + ",format=" + format);
             return;
         }
 
@@ -80,7 +80,9 @@ public class PCMPlayer {
         audioTrack.play();
     }
 
-    // 写入数据就能播放 但是要先初始化 开启播放器
+    /***
+     * 写入数据就能播放 但是要先初始化 开启播放器
+     */
     public void write(byte[] buffer) {
         /**
          * 1.要播放的buffer

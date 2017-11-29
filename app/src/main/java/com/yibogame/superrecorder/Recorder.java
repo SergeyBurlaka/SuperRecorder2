@@ -132,7 +132,7 @@ public class Recorder {
         double mean = v / (double) readSize;
         double volume = 10 * Math.log10(mean);
         if (iOnRecordingListener != null) {
-            iOnRecordingListener.onDataReceived(mPCMBuffer,readSize,volume);
+            iOnRecordingListener.onDataReceived(mPCMBuffer, readSize, volume);
         }
 //        LogUtils.d("分贝值:" + volume);
         // 大概一秒十次
@@ -197,6 +197,17 @@ public class Recorder {
     private static int[] mSampleRates = new int[]{8000, 11025, 22050, 44100};
 
     public AudioRecord findAudioRecord(int audioSource) {
+        int bufferSizeTemp = AudioRecord.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_8BIT);
+        if (bufferSizeTemp != AudioRecord.ERROR_BAD_VALUE) {
+            this.sampleRateInHz = 44100;
+            this.channelConfig = AudioFormat.CHANNEL_IN_MONO;
+            this.audioFormat = AudioFormat.ENCODING_PCM_8BIT;
+            this.bufferSizeInBytes = bufferSizeTemp;
+            AudioRecord recorderTemp = new AudioRecord(audioSource, 44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_8BIT, bufferSizeTemp);
+            LogUtils.i("default config is test ok,so return it.");
+            return recorderTemp;
+        }
+
         this.audioSource = audioSource;
         for (int rate : mSampleRates) {
             for (short audioFormat : new short[]{AudioFormat.ENCODING_PCM_8BIT, AudioFormat.ENCODING_PCM_16BIT}) {
@@ -227,7 +238,7 @@ public class Recorder {
                             AudioRecord recorder = new AudioRecord(audioSource, rate, channelConfig, audioFormat, bufferSize);
 
                             if (recorder.getState() == AudioRecord.STATE_INITIALIZED) {
-                                Log.d("found", "rate: " + rate + " channelConfig: " + channelConfig + " bufferSize: " + bufferSize + " audioFormat: " + audioFormat);
+                                Log.d("found", "sampleRateInHz: " + rate + " channelConfig: " + channelConfig + " bufferSize: " + bufferSize + " audioFormat: " + audioFormat);
                                 this.sampleRateInHz = rate;
                                 this.channelConfig = channelConfig;
                                 this.audioFormat = audioFormat;

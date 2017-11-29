@@ -268,8 +268,10 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mRecorderVoice.stop();
-        mRecorderVoice.release();
+        if (mRecorderVoice != null) {
+            mRecorderVoice.stop();
+            mRecorderVoice.release();
+        }
     }
 
     public byte[] toByteArray(short[] src) {
@@ -506,9 +508,9 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                 raf = new RandomAccessFile(file, "rw");
                 raf.seek(file.length());
                 raf.write(buffer);
-                if (autoLine) {
-                    raf.write("\n".getBytes());
-                }
+//                if (autoLine) {
+//                    raf.write("\n".getBytes());
+//                }
             } else {
                 //重写文件，覆盖掉原来的数据
                 out = new FileOutputStream(file);
@@ -576,7 +578,8 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             mRecorderVoice.setOnRecordingListener(new IOnRecordingListener() {
                 @Override
                 public void onDataReceived(short[] mPCMBuffer, int readSize, double volume) {
-                    LogUtils.d("onDataReceived of mic!");
+                    LogUtils.d("volume=" + volume);
+                    pbMic.setProgress((int) volume);
                     writeFileToSDCard(toByteArray(mPCMBuffer), base, "temp_mic.pcm", true, false);
                 }
             });
