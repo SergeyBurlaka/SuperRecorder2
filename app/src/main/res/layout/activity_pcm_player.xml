@@ -9,11 +9,30 @@
         android:id="@+id/btn_play_voice"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="播放语音文件" />
+        android:text="播放原文件" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <EditText
+            android:text="0.2"
+            android:id="@+id/et_db"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/bt_set_db"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="设置分贝" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/btn_play_bg"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="播放背景文件" />
+        android:text="播放分别调整后文件" />
+
 </LinearLayout>

@@ -3,6 +3,7 @@ package com.yibogame.superrecorder;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.Nullable;
+import android.widget.EditText;
 
 import com.blankj.utilcode.util.ToastUtils;
 import com.jakewharton.rxbinding2.view.RxView;
@@ -23,6 +24,9 @@ public class PCMPlayerActivity extends BaseActivity {
 
     private Bundle bundle;
     private String base = Environment.getExternalStorageDirectory().getPath();
+    private float mDB = 0;
+    private boolean isPlaying = false;
+    PCMPlayer pcmPlayer;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -37,18 +41,23 @@ public class PCMPlayerActivity extends BaseActivity {
             ToastUtils.showShort("请传入参数！");
             finish();
         }
+        RxView.clicks(findViewById(R.id.bt_set_db))
+                .subscribe(o -> {
+                    EditText editText = findViewById(R.id.et_db);
+                    mDB = Float.parseFloat(editText.getText().toString());
+                });
 
         RxView.clicks(findViewById(R.id.btn_play_voice))
                 .subscribe(o -> {
-                    PCMPlayer pcmPlayer = new PCMPlayer(bundle.getInt("voiceSampleRateInHz"),
-                            bundle.getInt("voiceChannelConfig"),
-                            bundle.getInt("voiceAudioFormat"));
+                    stopPlay();
+                    pcmPlayer = new PCMPlayer(0,0,0);
                     String tempPath = base + "/temp_mic.pcm";
+                    isPlaying = true;
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
                             try {
-                                pcmPlayer.write(readSDFile(tempPath,pcmPlayer.getBufferSize()));
+                                pcmPlayer.write(readSDFile(tempPath, pcmPlayer.getBufferSize(), -1));
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
@@ -58,11 +67,22 @@ public class PCMPlayerActivity extends BaseActivity {
                 });
         RxView.clicks(findViewById(R.id.btn_play_bg))
                 .subscribe(o -> {
-                    PCMPlayer pcmPlayer = new PCMPlayer(bundle.getInt("bgSampleRateInHz"),
-                            bundle.getInt("bgChannelConfig"),
-                            bundle.getInt("bgAudioFormat"));
-                    String tempPath = base + "/temp_bg.pcm";
-                    pcmPlayer.write(readSDFile(tempPath,pcmPlayer.getBufferSize()));
+                    stopPlay();
+                    pcmPlayer = new PCMPlayer(bundle.getInt("voiceSampleRateInHz"),
+                            bundle.getInt("voiceChannelConfig"),
+                            bundle.getInt("voiceAudioFormat"));
+                    String tempPath = base + "/bg_music_1.pcm";
+                    isPlaying = true;
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                pcmPlayer.write(readSDFile(tempPath, pcmPlayer.getBufferSize(), mDB));
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }).start();
                 });
     }
 
@@ -72,11 +92,11 @@ public class PCMPlayerActivity extends BaseActivity {
      * @return
      * @throws IOException
      */
-    public byte[] readSDFile(String fileName,int bufferSizeInBytes) throws IOException {
+    public byte[] readSDFile(String fileName, int bufferSizeInBytes, float db) throws IOException {
         byte[] bytesForReturn = null;
-        byte[] bytes = new byte[bufferSizeInBytes];
+        byte[] bytes = new byte[512];
         ByteArrayOutputStream arrayOutputStream = null;
-        int byteread=0;
+        int byteread = 0;
         try {
             FileInputStream inputStream = new FileInputStream(fileName);
 //            while ((byteread = inputStream.read(bytes)) != -1) {
@@ -84,8 +104,12 @@ public class PCMPlayerActivity extends BaseActivity {
 //                System.out.flush();
 //            }
             arrayOutputStream = new ByteArrayOutputStream();
-            while (inputStream.read(bytes) != -1) {
+            while (isPlaying && inputStream.read(bytes) != -1) {
+                if (db != -1) {
+                    bytes = VolumeUtil.getInstance().resetVolume(bytes, db);
+                }
                 arrayOutputStream.write(bytes, 0, bytes.length);
+
             }
             bytesForReturn = arrayOutputStream.toByteArray();
             inputStream.close();
@@ -96,5 +120,19 @@ public class PCMPlayerActivity extends BaseActivity {
             e.printStackTrace();
         }
         return bytesForReturn;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isPlaying = false;
+        stopPlay();
+    }
+
+    private void stopPlay(){
+        if (pcmPlayer != null) {
+            pcmPlayer.destoryPlay();
+            pcmPlayer = null;
+        }
     }
 }

@@ -46,7 +46,7 @@ public class PCMPlayer {
          */
 
         // 获得缓冲流大小
-        bufferSize = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, format);
+        bufferSize = AudioTrack.getMinBufferSize(sampleRate, channel, format);
 
         // 初始化AudioTrack
         /**
@@ -90,7 +90,9 @@ public class PCMPlayer {
          * 2.播放需要的位移
          * 3.播放的数据长度
          */
-        audioTrack.write(buffer, 0, buffer.length);
+        if (audioTrack != null) {
+            audioTrack.write(buffer, 0, buffer.length);
+        }
     }
 
     /**

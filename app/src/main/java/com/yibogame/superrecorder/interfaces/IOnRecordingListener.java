@@ -5,5 +5,5 @@ package com.yibogame.superrecorder.interfaces;
  */
 
 public interface IOnRecordingListener {
-    void onDataReceived(byte[] mPCMBuffer, int readSize, double volume);
+    void onDataReceived(short[] mPCMBuffer, int readSize, double volume);
 }

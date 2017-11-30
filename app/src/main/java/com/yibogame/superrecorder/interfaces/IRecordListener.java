@@ -5,12 +5,11 @@ package com.yibogame.superrecorder.interfaces;
  */
 
 public interface IRecordListener {
-    int TYPE_VOICE = 1,TYPE_BG = 2;
-    void initRecorder(int type);
+    void initRecorder();
 
-    void startRecord(int type);
+    void startRecord();
 
-    void pauseRecord(int type);
+    void pauseRecord();
 
-    void stopRecord(int type);
+    void stopRecord();
 }
