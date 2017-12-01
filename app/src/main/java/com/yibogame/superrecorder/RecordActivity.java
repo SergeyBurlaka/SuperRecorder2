@@ -1,7 +1,9 @@
 package com.yibogame.superrecorder;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Typeface;
@@ -21,6 +23,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.blankj.utilcode.util.BarUtils;
+import com.blankj.utilcode.util.FileUtils;
 import com.blankj.utilcode.util.LogUtils;
 import com.blankj.utilcode.util.ToastUtils;
 import com.jakewharton.rxbinding2.view.RxView;
@@ -121,8 +124,27 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         RxView.clicks(findViewById(R.id.ctv_next))
                 .throttleFirst(500, TimeUnit.MILLISECONDS)
                 .subscribe(o -> {
+//                    AlertDialog.Builder builder = new AlertDialog.Builder(RecordActivity.this)
+//                            .setTitle("提示")
+//                            .setMessage("录音已暂停，你是否确实要去下一步？")
+//                            .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+//                                @Override
+//                                public void onClick(DialogInterface dialog, int which) {
+//                                    dialog.dismiss();
+//                                }
+//                            })
+//                            .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+//                                @Override
+//                                public void onClick(DialogInterface dialog, int which) {
+//                                    Intent intent = new Intent(RecordActivity.this, SettingAudioActivity.class);
+//                                    startActivity(intent);
+//                                }
+//                            });
+//                    stopAll();
+//                    builder.show();
+                    deleteMp3();
+                    stopAll();
                     Intent intent = new Intent(RecordActivity.this, SettingAudioActivity.class);
-
                     startActivity(intent);
                 });
         RxView.clicks(findViewById(R.id.ctv_cut))
@@ -167,36 +189,10 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         //重录按钮
         RxView.clicks(findViewById(R.id.ctv_record))
                 .subscribe(o -> {
-                    stopMp3();
-                    stopTimer();
 
-                    stopWriteEmptyBgDataThread();
+                    stopAll();
 
-                    stopWriteEmptyDataThread();
-                    stopVoiceRecord();
-                    recordStatus = RECORD_STATUS_NONE;
-                    setVoiceRecorderUI();
-
-
-                    Map<String, Long> map = new HashMap<>();
-                    map.put("reStartRecord", System.currentTimeMillis());
-                    history.add(map);
-
-                    File file = new File(base + Config.tempMicFileName);
-                    if (file.exists()) {
-                        boolean b = file.delete();
-                        LogUtils.d("[voice]删除" + (b ? "成功" : "失败！"));
-                    } else {
-                        LogUtils.d("[voice]文件不存在！");
-                    }
-
-                    File fileBg = new File(base + Config.tempBgFileName);
-                    if (fileBg.exists()) {
-                        boolean b = fileBg.delete();
-                        LogUtils.d("[bg]删除" + (b ? "成功" : "失败！"));
-                    } else {
-                        LogUtils.d("[bg]文件不存在！");
-                    }
+                    deleteTempFiles();
 
                 });
 
@@ -230,38 +226,53 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
         RxView.clicks(findViewById(R.id.tv_change_bg))
                 .subscribe(o -> {
-                    Intent intent = new Intent(RecordActivity.this, PCMPlayerActivity.class);
-                    Bundle bundle = new Bundle();
-                    bundle.putInt("voiceSampleRateInHz", RecorderUtil.getInstance().getSampleRateInHz());
-                    bundle.putInt("voiceChannelConfig", RecorderUtil.getInstance().getChannelConfig());
-                    bundle.putInt("voiceAudioFormat", RecorderUtil.getInstance().getAudioFormat());
-                    bundle.putInt("voiceBufferSizeInBytes", RecorderUtil.getInstance().getBufferSizeInBytes());
-                    intent.putExtra("bundle", bundle);
-                    startActivity(intent);
+//                    Intent intent = new Intent(RecordActivity.this, PCMPlayerActivity.class);
+//                    Bundle bundle = new Bundle();
+//                    bundle.putInt("voiceSampleRateInHz", RecorderUtil.getInstance().getSampleRateInHz());
+//                    bundle.putInt("voiceChannelConfig", RecorderUtil.getInstance().getChannelConfig());
+//                    bundle.putInt("voiceAudioFormat", RecorderUtil.getInstance().getAudioFormat());
+//                    bundle.putInt("voiceBufferSizeInBytes", RecorderUtil.getInstance().getBufferSizeInBytes());
+//                    intent.putExtra("bundle", bundle);
+//                    startActivity(intent);
                 });
 
 
-        Observable.just(true)
+        Observable.just(!FileUtils.isFileExists(base + Config.bgFileMp3) || !FileUtils.isFileExists(base + Config.bgFilePCM))
+
+                .flatMap(new Func1<Boolean, Observable<String>>() {
+                    @Override
+                    public Observable<String> call(Boolean aBoolean) {
+                        if (!aBoolean) {
+                            return Observable.just(null);
+                        }
+                        MoveAssetsToSDCardUtil.getInstance().move(RecordActivity.this, "bg_music_1.mp3", base + Config.bgFileMp3);
+                        return Observable.just(base + Config.bgFileMp3);
+                    }
+                })
+                .subscribeOn(Schedulers.io())
                 .doOnSubscribe(new Action0() {
                     @Override
                     public void call() {
                         showDialog("请稍等...");
                     }
                 })
-                .subscribeOn(Schedulers.io())
-                .map(new Func1<Boolean, Boolean>() {
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .flatMap(new Func1<String, Observable<Boolean>>() {
                     @Override
-                    public Boolean call(Boolean aBoolean) {
+                    public Observable<Boolean> call(String s) {
+                        if (s == null) {
+                            return Observable.just(true);
+                        }
                         Mp32PCMCmd.Builder builder = new Mp32PCMCmd.Builder()
                                 .setChannel(1)
                                 .setRate(44100)
-                                .setInputFile(base + "/bg_music_1.mp3")
-                                .setOutputFile(base + Config.tempBgFileName);
+                                .setInputFile(s)
+                                .setOutputFile(base + Config.bgFilePCM);
                         int ret = FFmpegBox.getInstance().execute(builder.build());
-                        LogUtils.d("ret=" + ret);
-                        return true;
+                        return Observable.just(true);
                     }
                 })
+                .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Subscriber<Boolean>() {
                     @Override
@@ -271,7 +282,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
                     @Override
                     public void onError(Throwable e) {
-
+                        ToastUtils.showShort(e.getMessage());
                     }
 
                     @Override
@@ -280,6 +291,43 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     }
                 });
 
+
+    }
+
+    private void deleteMp3() {
+        File file = new File(base + "/a1.mp3");
+        if (file.exists()) {
+            boolean b = file.delete();
+            LogUtils.d("[voice]删除" + (b ? "成功" : "失败！"));
+        } else {
+            LogUtils.d("[voice]文件不存在！");
+        }
+
+        File fileBg = new File(base + "/a2.mp3");
+        if (fileBg.exists()) {
+            boolean b = fileBg.delete();
+            LogUtils.d("[bg]删除" + (b ? "成功" : "失败！"));
+        } else {
+            LogUtils.d("[bg]文件不存在！");
+        }
+    }
+
+    private void deleteTempFiles() {
+        File file = new File(base + Config.tempMicFileName);
+        if (file.exists()) {
+            boolean b = file.delete();
+            LogUtils.d("[voice]删除" + (b ? "成功" : "失败！"));
+        } else {
+            LogUtils.d("[voice]文件不存在！");
+        }
+
+        File fileBg = new File(base + Config.tempBgFileName);
+        if (fileBg.exists()) {
+            boolean b = fileBg.delete();
+            LogUtils.d("[bg]删除" + (b ? "成功" : "失败！"));
+        } else {
+            LogUtils.d("[bg]文件不存在！");
+        }
     }
 
     private void setVoiceRecorderUI() {
@@ -339,7 +387,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     protected void onDestroy() {
         super.onDestroy();
         stopVoiceRecord();
-        stopWriteEmptyDataThread();
+        stopWriteEmptyVoiceDataThread();
         stopWriteEmptyBgDataThread();
         stopMp3();
     }
@@ -503,18 +551,53 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         pbBg.setProgress(height);
     }
 
+    private void stopAll() {
+        totalNeedSleep = 0;
+        stopMp3();
+        stopTimer();
+        stopWriteEmptyVoiceDataThread();
+        stopVoiceRecord();
+        recordStatus = RECORD_STATUS_NONE;
+        setVoiceRecorderUI();
+        stopWriteEmptyBgDataThread();
+    }
+//
+//    private boolean tempRecording = false, tempPlaying = false, isTempRecordingActivity = false, isTempPlayingMp3 = false;
+//
+//    private void pause() {
+//        isTempRecordingActivity = isRecordingActivity;
+//        isTempPlayingMp3 = isPlayingMp3;
+//
+//        tempRecording = RecorderUtil.getInstance().isRecording();
+//        tempPlaying = myMediaPlayer == null;
+//        if (isPlayingMp3) {
+//            pauseMp3();
+//            stopTimer();
+//            stopWriteEmptyBgDataThread();
+//
+//        }
+//
+//        stopVoiceRecord();
+//        recordStatus = RECORD_STATUS_PAUSE;
+//        setVoiceRecorderUI();
+//        stopWriteEmptyVoiceDataThread();
+//    }
+//
+//    private void resume() {
+//        if (tempRecording) {
+//            isRecordingActivity = isTempRecordingActivity;
+//            requestPermissionToStartVoiceRecord();
+//            recordStatus = RECORD_STATUS_RECORDING;
+//            setVoiceRecorderUI();
+//        }
+//    }
+
 
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        stopMp3();
-        stopTimer();
-        stopWriteEmptyDataThread();
-        stopVoiceRecord();
-        recordStatus = RECORD_STATUS_NONE;
-        setVoiceRecorderUI();
-
-        stopWriteEmptyBgDataThread();
+        deleteTempFiles();
+        stopAll();
     }
 
 
@@ -535,7 +618,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         RecorderUtil.getInstance().stopRecording();
     }
 
-    private void stopWriteEmptyDataThread() {
+    private void stopWriteEmptyVoiceDataThread() {
         if (threadAddBlankVoice != null && threadAddBlankVoice.isAlive() && !threadAddBlankVoice.isInterrupted()) {
             threadAddBlankVoice.interrupt();
             threadAddBlankVoice = null;

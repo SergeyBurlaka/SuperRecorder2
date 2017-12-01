@@ -52,6 +52,6 @@ public abstract class BaseActivity extends AppCompatActivity {
         mProgressDialog.setCancelable(false);
         mProgressDialog.setCanceledOnTouchOutside(false);
         mProgressDialog.setMessage(message);
-        mProgressDialog.dismiss();
+        mProgressDialog.show();
     }
 }

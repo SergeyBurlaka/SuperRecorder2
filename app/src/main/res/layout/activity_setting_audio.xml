@@ -115,6 +115,7 @@
             app:drawableTopCompatSize="48dp" />
 
         <com.yibogame.superrecorder.CustomTextView
+            android:id="@+id/ctv_save"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"

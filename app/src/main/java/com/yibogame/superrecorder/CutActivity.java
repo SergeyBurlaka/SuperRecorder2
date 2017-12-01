@@ -1,6 +1,7 @@
 package com.yibogame.superrecorder;
 
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.view.View;
 
@@ -12,6 +13,9 @@ import com.blankj.utilcode.util.BarUtils;
 
 public class CutActivity extends BaseActivity {
 
+    private String time;
+    String base = Environment.getExternalStorageDirectory().getPath();
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -19,4 +23,8 @@ public class CutActivity extends BaseActivity {
         View vStatus = findViewById(R.id.v_status);
         vStatus.getLayoutParams().height = BarUtils.getStatusBarHeight();
     }
+
+
+
+
 }
