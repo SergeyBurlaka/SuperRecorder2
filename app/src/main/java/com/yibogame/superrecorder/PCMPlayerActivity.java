@@ -24,7 +24,7 @@ public class PCMPlayerActivity extends BaseActivity {
 
     private Bundle bundle;
     private String base = Environment.getExternalStorageDirectory().getPath();
-    private float mDB = 0;
+    private float mDB = 0.5f;
     private boolean isPlaying = false;
     PCMPlayer pcmPlayer;
 
@@ -51,7 +51,7 @@ public class PCMPlayerActivity extends BaseActivity {
                 .subscribe(o -> {
                     stopPlay();
                     pcmPlayer = new PCMPlayer(0,0,0);
-                    String tempPath = base + "/temp_mic.pcm";
+                    String tempPath = base + Config.tempMicFileName;
                     isPlaying = true;
                     new Thread(new Runnable() {
                         @Override
@@ -68,10 +68,8 @@ public class PCMPlayerActivity extends BaseActivity {
         RxView.clicks(findViewById(R.id.btn_play_bg))
                 .subscribe(o -> {
                     stopPlay();
-                    pcmPlayer = new PCMPlayer(bundle.getInt("voiceSampleRateInHz"),
-                            bundle.getInt("voiceChannelConfig"),
-                            bundle.getInt("voiceAudioFormat"));
-                    String tempPath = base + "/bg_music_1.pcm";
+                    pcmPlayer = new PCMPlayer(0,0,0);
+                    String tempPath = base + Config.tempBgFileName;
                     isPlaying = true;
                     new Thread(new Runnable() {
                         @Override

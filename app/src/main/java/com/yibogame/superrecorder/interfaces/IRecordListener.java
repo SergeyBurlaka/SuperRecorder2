@@ -5,11 +5,9 @@ package com.yibogame.superrecorder.interfaces;
  */
 
 public interface IRecordListener {
-    void initRecorder();
 
-    void startRecord();
 
-    void pauseRecord();
+    void startVoiceRecord();
 
-    void stopRecord();
+    void stopVoiceRecord();
 }

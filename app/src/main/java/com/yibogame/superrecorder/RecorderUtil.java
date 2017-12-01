@@ -90,10 +90,9 @@ public class RecorderUtil {
         }
     }
 
-    void appendBlankData(float time) {
-        String filePath = mFilePath;
-        short sData[] = new short[bufferSizeInBytes / 2];
-        LogUtils.w("add empty data.");
+
+    void appendBlankData(float time,String filePath) {
+//        LogUtils.w("add empty data.");
         FileOutputStream os = null;
         try {
             os = new FileOutputStream(filePath, true);
@@ -105,8 +104,9 @@ public class RecorderUtil {
         }
 
         try {
+//            LogUtils.d("ready to add!");
             // writes the data to file from buffer stores the voice buffer
-            byte bData[] = new byte[(int) (44100 * 16 * time)];
+            byte bData[] = new byte[(int) (88200 * time)];//44100*16*1/8
             for (int i = 0; i < bData.length; i++) {
                 bData[i] = 0;
             }
@@ -116,6 +116,7 @@ public class RecorderUtil {
         }
 
         try {
+//            LogUtils.d("add finish!");
             os.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -125,6 +126,7 @@ public class RecorderUtil {
     boolean isRecording() {
         return isRecording;
     }
+
 
     private void writeAudioDataToFile(boolean append) {
         // Write the output audio in byte

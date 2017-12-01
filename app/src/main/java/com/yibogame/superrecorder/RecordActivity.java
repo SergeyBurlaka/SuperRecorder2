@@ -29,6 +29,7 @@ import com.tbruyelle.rxpermissions.RxPermissions;
 import com.yibogame.superrecorder.cmd.Mp32PCMCmd;
 import com.yibogame.superrecorder.interfaces.IRecordListener;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -70,8 +71,8 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
     private List<Map<String, Long>> history = new ArrayList<>();
 
-    private boolean isRecordingActivity = false;
-    private Thread threadAddBlankVoice;
+    private boolean isRecordingActivity = false, isPlayingMp3 = false;
+    private Thread threadAddBlankVoice, threadAddBlankBg;
 
 
     @Override
@@ -121,13 +122,14 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                 .throttleFirst(500, TimeUnit.MILLISECONDS)
                 .subscribe(o -> {
                     Intent intent = new Intent(RecordActivity.this, SettingAudioActivity.class);
+
                     startActivity(intent);
                 });
         RxView.clicks(findViewById(R.id.ctv_cut))
                 .throttleFirst(500, TimeUnit.MILLISECONDS)
                 .subscribe(o -> {
                     Map<String, Long> map = new HashMap<>();
-                    map.put("stopRecord", System.currentTimeMillis());
+                    map.put("stopVoiceRecord", System.currentTimeMillis());
                     history.add(map);
 
                     Intent intent = new Intent(RecordActivity.this, CutActivity.class);
@@ -136,27 +138,26 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         ctvRecordPause = findViewById(R.id.ctv_record_pause);
         //录制按钮
         RxView.clicks(ctvRecordPause)
-                .throttleFirst(500, TimeUnit.MILLISECONDS)
+                .throttleFirst(200, TimeUnit.MILLISECONDS)
                 .subscribe(o -> {
                     switch (recordStatus) {
                         case RECORD_STATUS_NONE:
-                            startVoiceRecord();
                             isRecordingActivity = true;
-                            Map<String, Long> map = new HashMap<>();
-                            map.put("startRecord", System.currentTimeMillis());
-                            history.add(map);
+                            requestPermissionToStartVoiceRecord();
+                            recordStatus = RECORD_STATUS_RECORDING;
+                            setVoiceRecorderUI();
                             break;
                         case RECORD_STATUS_PAUSE:
-                            goOnVoiceRecordUI();
-                            Map<String, Long> map2 = new HashMap<>();
-                            map2.put("goOnRecord", System.currentTimeMillis());
-                            history.add(map2);
+                            isRecordingActivity = true;
+                            requestPermissionToStartVoiceRecord();
+                            recordStatus = RECORD_STATUS_RECORDING;
+                            setVoiceRecorderUI();
                             break;
                         case RECORD_STATUS_RECORDING:
-                            pauseVoiceRecordUI();
-                            Map<String, Long> map3 = new HashMap<>();
-                            map3.put("pauseRecord", System.currentTimeMillis());
-                            history.add(map3);
+                            isRecordingActivity = false;
+                            stopVoiceRecord();
+                            recordStatus = RECORD_STATUS_PAUSE;
+                            setVoiceRecorderUI();
                             break;
                         default:
                             break;
@@ -168,10 +169,35 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                 .subscribe(o -> {
                     stopMp3();
                     stopTimer();
-                    stopVoiceRecordUI();
+
+                    stopWriteEmptyBgDataThread();
+
+                    stopWriteEmptyDataThread();
+                    stopVoiceRecord();
+                    recordStatus = RECORD_STATUS_NONE;
+                    setVoiceRecorderUI();
+
+
                     Map<String, Long> map = new HashMap<>();
                     map.put("reStartRecord", System.currentTimeMillis());
                     history.add(map);
+
+                    File file = new File(base + Config.tempMicFileName);
+                    if (file.exists()) {
+                        boolean b = file.delete();
+                        LogUtils.d("[voice]删除" + (b ? "成功" : "失败！"));
+                    } else {
+                        LogUtils.d("[voice]文件不存在！");
+                    }
+
+                    File fileBg = new File(base + Config.tempBgFileName);
+                    if (fileBg.exists()) {
+                        boolean b = fileBg.delete();
+                        LogUtils.d("[bg]删除" + (b ? "成功" : "失败！"));
+                    } else {
+                        LogUtils.d("[bg]文件不存在！");
+                    }
+
                 });
 
         switchButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -230,7 +256,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                                 .setChannel(1)
                                 .setRate(44100)
                                 .setInputFile(base + "/bg_music_1.mp3")
-                                .setOutputFile(base + "/bg_music_1.pcm");
+                                .setOutputFile(base + Config.tempBgFileName);
                         int ret = FFmpegBox.getInstance().execute(builder.build());
                         LogUtils.d("ret=" + ret);
                         return true;
@@ -253,41 +279,52 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
                     }
                 });
-        threadAddBlankVoice = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (!isInterrupted) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        isInterrupted = true;
-                    }
-                    if (!isRecordingActivity) {
-                        RecorderUtil.getInstance().appendBlankData(0.01f);
-                    }
-                }
-            }
-        });
 
     }
+
+    private void setVoiceRecorderUI() {
+        switch (recordStatus) {
+            case RECORD_STATUS_NONE:
+                ctvRecordPause.setDrawableTop(R.mipmap.ic_recorder);
+                ctvRecordPause.setText("录音");
+                pbMic.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        pbMic.setProgress(0);
+                    }
+                });
+                break;
+            case RECORD_STATUS_PAUSE:
+                ctvRecordPause.setDrawableTop(R.mipmap.ic_recorder);
+                ctvRecordPause.setText("继续");
+                pbMic.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        pbMic.setProgress(0);
+                    }
+                });
+                break;
+            case RECORD_STATUS_RECORDING:
+                ctvRecordPause.setDrawableTop(R.mipmap.ic_recorde_pause);
+                ctvRecordPause.setText("暂停");
+                break;
+            default:
+                break;
+        }
+    }
+
 
     private boolean isInterrupted = false;
 
     String base = Environment.getExternalStorageDirectory().getPath();
 
-    private void startVoiceRecord() {
+    private void requestPermissionToStartVoiceRecord() {
         rxPermissions.request(Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 .subscribe(granted -> { // will emit 2 Permission objects
                             if (granted) {
                                 // `permission.name` is granted !
-                                startRecord();
-                                if (!threadAddBlankVoice.isAlive()) {
-                                    threadAddBlankVoice.start();
-                                }
-                                recordStatus = RECORD_STATUS_RECORDING;
-                                ctvRecordPause.setDrawableTop(R.mipmap.ic_recorder);
-                                ctvRecordPause.setText("暂停");
+                                startVoiceRecord();
+                                startWriteEmptyDataThread();
                             } else {
                                 // Denied permission with ask never again
                                 // Need to go to the settings
@@ -298,104 +335,94 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     }
 
 
-    private void pauseVoiceRecordUI() {
-        recordStatus = RECORD_STATUS_PAUSE;
-        ctvRecordPause.setDrawableTop(R.mipmap.ic_recorde_pause);
-        ctvRecordPause.setText("继续");
-//        mRecorderVoice.stop();//继续录音，让它录制静音，只为了保证两个长度一样。
-        stopVoiceRecordUI();
-    }
-
-    private void stopVoiceRecordUI() {
-        isRecordingActivity = false;
-        recordStatus = RECORD_STATUS_NONE;
-        ctvRecordPause.setDrawableTop(R.mipmap.ic_recorder);
-        ctvRecordPause.setText("录音");
-        stopRecord();
-    }
-
-    private void goOnVoiceRecordUI() {
-        isRecordingActivity = true;
-        recordStatus = RECORD_STATUS_RECORDING;
-        ctvRecordPause.setDrawableTop(R.mipmap.ic_recorder);
-        ctvRecordPause.setText("暂停");
-        startVoiceRecord();
-    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        stopRecord();
-        stopEmpty();
+        stopVoiceRecord();
+        stopWriteEmptyDataThread();
+        stopWriteEmptyBgDataThread();
+        stopMp3();
     }
 
 
     private void playMp3() {
-        if (mAudioManager == null) {
-            return;
-        }
-        if (currMusicVolume != -1) {
-            mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currMusicVolume, 0);
-        }
-        if (myMediaPlayer != null) {
-            myMediaPlayer.seekTo(myMediaPlayerCurrentPosition);
-            myMediaPlayer.start();
-            //start record???
-            if (visualizer != null) {
-                visualizer.setEnabled(true);
-            }
-            startTimer();
-            return;
-        }
+        rxPermissions.request(Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                .subscribe(granted -> {
+                    if (mAudioManager == null) {
+                        return;
+                    }
+                    //开始填充空数据
+                    startWriteEmptyDataThread();
+                    startWriteEmptyBgDataThread();
+
+                    if (currMusicVolume != -1) {
+                        mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currMusicVolume, 0);
+                    }
+                    if (myMediaPlayer != null) {
+//                        myMediaPlayer.seekTo(myMediaPlayerCurrentPosition);
+                        myMediaPlayer.start();
+                        //start record???
+                        if (visualizer != null) {
+                            visualizer.setEnabled(true);
+                        }
+                        startTimer();
+                        return;
+                    }
 
 
-        AssetFileDescriptor fileDescriptor;
-        try {
-            fileDescriptor = RecordActivity.this.getAssets().openFd("bg_music_1.mp3");
-            myMediaPlayer = new MediaPlayer();
-            myMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-            myMediaPlayer.setDataSource(fileDescriptor.getFileDescriptor(),
-                    fileDescriptor.getStartOffset(),
-                    fileDescriptor.getLength());
-            myMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                @Override
-                public void onCompletion(MediaPlayer mediaPlayer) {
-                    LogUtils.e("MediaPlayer onCompletion!");
-                    bgLength = 52;
-                    currBgLength = bgLength;
-                }
-            });
-            visualizer = new Visualizer(myMediaPlayer.getAudioSessionId());
-            visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[1]);
-            visualizer.setDataCaptureListener(new Visualizer.OnDataCaptureListener() {
-                @Override
-                public void onWaveFormDataCapture(Visualizer visualizer, byte[] bytes, int i) {
+                    AssetFileDescriptor fileDescriptor;
+                    try {
+                        fileDescriptor = RecordActivity.this.getAssets().openFd("bg_music_1.mp3");
+                        myMediaPlayer = new MediaPlayer();
+                        myMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                        myMediaPlayer.setDataSource(fileDescriptor.getFileDescriptor(),
+                                fileDescriptor.getStartOffset(),
+                                fileDescriptor.getLength());
+                        myMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                            @Override
+                            public void onCompletion(MediaPlayer mediaPlayer) {
+                                LogUtils.e("MediaPlayer onCompletion!");
+                                bgLength = 52;
+                                currBgLength = bgLength;
+                            }
+                        });
+                        visualizer = new Visualizer(myMediaPlayer.getAudioSessionId());
+                        visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[1]);
+                        visualizer.setDataCaptureListener(new Visualizer.OnDataCaptureListener() {
+                            @Override
+                            public void onWaveFormDataCapture(Visualizer visualizer, byte[] bytes, int i) {
 
-                }
+                            }
 
-                @Override
-                public void onFftDataCapture(Visualizer visualizer, byte[] bytes, int i) {
-                    updateVisualizer(bytes);
-                }
-            }, Visualizer.getMaxCaptureRate() / 2, false, true);
-            myMediaPlayer.setLooping(true);
-            myMediaPlayer.prepare();
-            myMediaPlayer.seekTo(myMediaPlayerCurrentPosition);
-            myMediaPlayer.start();
-            visualizer.setEnabled(true);
-            startTimer();
-            //will record???
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+                            @Override
+                            public void onFftDataCapture(Visualizer visualizer, byte[] bytes, int i) {
+//                                LogUtils.d("bytes[10]=" + bytes[10]);
+//                                RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currMusicVolume / (float) mACSBMusicVolume.getMax(), true);
+                                updateVisualizer(bytes);
+                            }
+                        }, Visualizer.getMaxCaptureRate() / 2, false, true);
+                        myMediaPlayer.setLooping(true);
+                        myMediaPlayer.prepare();
+//                        myMediaPlayer.seekTo(myMediaPlayerCurrentPosition);
+                        myMediaPlayer.start();
+                        isPlayingMp3 = true;
+                        visualizer.setEnabled(true);
+                        startTimer();
+                        //will record???
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
     }
 
 
-    private int myMediaPlayerCurrentPosition = 0;
+//    private int myMediaPlayerCurrentPosition = 0;
 
     private void pauseMp3() {
+        myMediaPlayer.pause();
+        isPlayingMp3 = false;
         mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0);
-        myMediaPlayerCurrentPosition = myMediaPlayer.getCurrentPosition();
+//        myMediaPlayerCurrentPosition = myMediaPlayer.getCurrentPosition();
 //        myMediaPlayer.pause();
         visualizer.setEnabled(false);
         stopTimer();
@@ -403,10 +430,11 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
 
     private void stopMp3() {
-        myMediaPlayerCurrentPosition = 0;
+//        myMediaPlayerCurrentPosition = 0;
         //stop record???
         if (myMediaPlayer != null) {
             myMediaPlayer.stop();
+            isPlayingMp3 = false;
             myMediaPlayer.release();
         }
         if (visualizer != null) {
@@ -481,18 +509,18 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         super.onBackPressed();
         stopMp3();
         stopTimer();
-        stopVoiceRecordUI();
-        stopRecord();
+        stopWriteEmptyDataThread();
+        stopVoiceRecord();
+        recordStatus = RECORD_STATUS_NONE;
+        setVoiceRecorderUI();
+
+        stopWriteEmptyBgDataThread();
     }
 
-    @Override
-    public void initRecorder() {
-
-    }
 
     @Override
-    public void startRecord() {
-        RecorderUtil.getInstance().startRecording(MediaRecorder.AudioSource.MIC, base + "/temp_mic.pcm", true, new RecorderUtil.OnVolumeChangeListener() {
+    public void startVoiceRecord() {
+        RecorderUtil.getInstance().startRecording(MediaRecorder.AudioSource.MIC, base + Config.tempMicFileName, true, new RecorderUtil.OnVolumeChangeListener() {
             @Override
             public void onVolumeChanged(double volume) {
                 pbMic.setProgress((int) volume);
@@ -500,20 +528,88 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         });
     }
 
-    @Override
-    public void pauseRecord() {
-        RecorderUtil.getInstance().stopRecording();
-    }
 
     @Override
-    public void stopRecord() {
+    public void stopVoiceRecord() {
         isRecordingActivity = false;
         RecorderUtil.getInstance().stopRecording();
     }
 
-    private void stopEmpty(){
-        if (threadAddBlankVoice.isAlive() && !threadAddBlankVoice.isInterrupted()) {
+    private void stopWriteEmptyDataThread() {
+        if (threadAddBlankVoice != null && threadAddBlankVoice.isAlive() && !threadAddBlankVoice.isInterrupted()) {
             threadAddBlankVoice.interrupt();
+            threadAddBlankVoice = null;
+        }
+    }
+
+    private long needSleep = 100, needSleepBg = 1000, totalNeedSleep = 0;
+
+    private void startWriteEmptyDataThread() {
+        if (threadAddBlankVoice != null && threadAddBlankVoice.isAlive() && !threadAddBlankVoice.isInterrupted()) {
+            return;
+        }
+        threadAddBlankVoice = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!isInterrupted) {
+                    try {
+                        Thread.sleep(needSleep);
+                        long preMills = System.currentTimeMillis();
+                        if (!isRecordingActivity) {
+                            RecorderUtil.getInstance().appendBlankData(0.1f, base + Config.tempMicFileName);
+                            needSleep = 100 - (System.currentTimeMillis() - preMills);
+                            needSleep = needSleep > 0 ? needSleep : 0;
+                        } else {
+                            needSleep = 100;
+                        }
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        isInterrupted = true;
+                    }
+                }
+            }
+        });
+        threadAddBlankVoice.start();
+    }
+
+
+    private void startWriteEmptyBgDataThread() {
+        if (threadAddBlankBg != null && threadAddBlankBg.isAlive() && !threadAddBlankBg.isInterrupted()) {
+            return;
+        }
+        threadAddBlankBg = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!isInterrupted) {
+                    try {
+                        Thread.sleep(needSleep);
+                        long preMills = System.currentTimeMillis();
+                        if (!isPlayingMp3) {
+                            RecorderUtil.getInstance().appendBlankData(0.1f, base + Config.tempBgFileName);
+                            needSleep = needSleepBg - (System.currentTimeMillis() - preMills);
+                            needSleep = needSleep > 0 ? needSleep : 0;
+                            totalNeedSleep += needSleep;
+                        } else {
+                            needSleep = 1000;
+                            totalNeedSleep += needSleep;
+                            RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, totalNeedSleep - needSleep, needSleep, (float) currMusicVolume / pbBg.getMax(), true);
+                        }
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        isInterrupted = true;
+                    }
+                }
+            }
+        });
+        threadAddBlankBg.start();
+    }
+
+    private void stopWriteEmptyBgDataThread() {
+        if (threadAddBlankBg != null && threadAddBlankBg.isAlive() && !threadAddBlankBg.isInterrupted()) {
+            threadAddBlankBg.interrupt();
+            threadAddBlankBg = null;
         }
     }
 }

@@ -80,13 +80,13 @@ public class ComplexActivity extends AppCompatActivity {
 //                            })
 //                            .map(s -> {
 //                                List<String> list = new ArrayList<>();
-//                                list.add(base+"/temp_mic.pcm");
+//                                list.add(base+Config.tempMicFileName);
 //                                list.add(base+"/split2_2.mp3");
 //                                mix(list,1,base+"/mix.mp3");
 //                                return "success!";
 //                            })
                             .map(s -> {
-                                cast(base+"/temp_mic.pcm",base+"/temp_mic.mp3");
+                                cast(base + Config.tempMicFileName, base + "/temp_mic.mp3");
                                 return "success!";
                             })
                             .observeOn(AndroidSchedulers.mainThread())
@@ -132,7 +132,7 @@ public class ComplexActivity extends AppCompatActivity {
         LogUtils.d("ret=" + ret);
     }
 
-    public void contact(List<String> list,String outputFile){
+    public void contact(List<String> list, String outputFile) {
         ConcatCmd.Builder builder = new ConcatCmd.Builder();
         for (String s : list) {
             builder.addInputs(s);
@@ -142,7 +142,7 @@ public class ComplexActivity extends AppCompatActivity {
         int ret = FFmpegBox.getInstance().execute(command);
     }
 
-    public void mix(List<String> list,int whichOne,String outputFile){
+    public void mix(List<String> list, int whichOne, String outputFile) {
         MixCmd.Builder builder = new MixCmd.Builder();
         for (String s : list) {
             builder.addInputs(s);
@@ -154,7 +154,7 @@ public class ComplexActivity extends AppCompatActivity {
         int ret = FFmpegBox.getInstance().execute(command);
     }
 
-    public void cast(String inputFile,String outputFile){
+    public void cast(String inputFile, String outputFile) {
         PCM2Mp3Cmd.Builder builder = new PCM2Mp3Cmd.Builder();
         Command command = builder.setChannel(1)
                 .setInputFile(inputFile)
