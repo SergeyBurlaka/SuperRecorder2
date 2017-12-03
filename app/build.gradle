@@ -4,7 +4,7 @@ android {
     compileSdkVersion 26
     defaultConfig {
         applicationId "com.yibogame.superrecorder"
-        minSdkVersion 15
+        minSdkVersion 16
         targetSdkVersion 21
         versionCode 1
         versionName "1.0"
@@ -81,4 +81,5 @@ dependencies {
     compile 'com.jakewharton.rxbinding2:rxbinding-recyclerview-v7:2.0.0'
     compile 'com.blankj:utilcode:1.9.0'
     compile 'com.kyleduo.switchbutton:library:2.0.0'
+    compile 'com.github.Jay-Goo:RangeSeekBar:v1.1.0'
 }

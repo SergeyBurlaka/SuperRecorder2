@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <scale
+            android:drawable="@mipmap/btn_cut"
+            android:scaleHeight="10dp"
+            android:scaleWidth="10dp" />
+    </item>
+</layer-list>

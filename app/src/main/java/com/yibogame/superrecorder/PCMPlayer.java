@@ -3,6 +3,7 @@ package com.yibogame.superrecorder;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.support.annotation.NonNull;
 
 import com.blankj.utilcode.util.LogUtils;
 
@@ -92,6 +93,12 @@ public class PCMPlayer {
          */
         if (audioTrack != null) {
             audioTrack.write(buffer, 0, buffer.length);
+        }
+    }
+
+    public void write(@NonNull byte[] audioData, int offsetInBytes, int sizeInBytes){
+        if (audioTrack != null) {
+            audioTrack.write(audioData, offsetInBytes, sizeInBytes);
         }
     }
 

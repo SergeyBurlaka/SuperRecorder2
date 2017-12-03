@@ -175,7 +175,7 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/iv_dot"
             android:layout_centerHorizontal="true"
-            android:text="01:49"
+            android:text="00:00"
             android:textColor="#333"
             android:textSize="38sp" />
 
@@ -220,6 +220,7 @@
             android:src="@mipmap/ic_note" />
 
         <com.yibogame.superrecorder.RulerView
+            android:visibility="invisible"
             android:layout_width="match_parent"
             android:layout_height="46dp"
             android:layout_below="@+id/iv_mic"

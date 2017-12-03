@@ -17,7 +17,7 @@
         android:orientation="horizontal">
 
         <EditText
-            android:text="0.2"
+            android:text="1.0"
             android:id="@+id/et_db"
             android:layout_width="100dp"
             android:layout_height="wrap_content" />

@@ -23,9 +23,10 @@ public class RecordBgMusicUtil {
     }
 
     void appendMusic(String oriBgPath, String filePath, long skipMills, long readTimeMill, float volumePercent, boolean append) {
-        LogUtils.d("skipMills="+skipMills+",readTimeMill="+readTimeMill);
-        int offset = (int) (88200 * (skipMills / 1000f));
+
+        int offset = (int) (88200 * ((float) (skipMills) / 1000f));
         int length = (int) (88200 * ((float) (readTimeMill) / 1000f));
+//        LogUtils.d("skipMills=" + skipMills + ",readTimeMill=" + readTimeMill + ",offset=" + offset + ",length=" + length);
         try {
             byte[] bytes = readSDFile(oriBgPath, offset, length, volumePercent);
             writeAudioDataToFile(filePath, bytes, append);
@@ -46,24 +47,19 @@ public class RecordBgMusicUtil {
      * @throws IOException
      */
     public byte[] readSDFile(String fileName, int offset, int length, float db) throws IOException {
-        byte[] bytesForReturn = null;
+//        byte[] bytesForReturn = null;
         byte[] bytes = new byte[length];
         ByteArrayOutputStream arrayOutputStream = null;
         int byteread = 0;
         try {
             FileInputStream inputStream = new FileInputStream(fileName);
             arrayOutputStream = new ByteArrayOutputStream();
-            inputStream.skip(offset);
-            inputStream.read(bytes, 0, length);
-            bytes = VolumeUtil.getInstance().resetVolume(bytes, db);
-            arrayOutputStream.write(bytes);
-//            while (inputStream.read(bytes) != -1) {
-//                if (db != -1) {
-//                    bytes = VolumeUtil.getInstance().resetVolume(bytes, db);
-//                }
-//                arrayOutputStream.write(bytes, offset, bytes.length);
-//            }
-            bytesForReturn = arrayOutputStream.toByteArray();
+
+            long actualSkiped = inputStream.skip(offset);
+            int read = inputStream.read(bytes, 0, length);
+            if (db != -1) {
+                bytes = VolumeUtil.getInstance().resetVolume(bytes, db);
+            }
             inputStream.close();
             arrayOutputStream.close();
         } catch (FileNotFoundException e) {
@@ -71,10 +67,10 @@ public class RecordBgMusicUtil {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return bytesForReturn;
+        return bytes;
     }
 
-    private void writeAudioDataToFile(String filePath, byte[] bytes, boolean append) {
+    public void writeAudioDataToFile(String filePath, byte[] bytes, boolean append) {
         if (bytes == null) {
             return;
         }
@@ -92,7 +88,7 @@ public class RecordBgMusicUtil {
 //        byte bData[] = short2byte(sData);
         try {
 //            os.write(bData, bytes);
-            os.write(bytes);
+            os.write(bytes, 0, bytes.length);
         } catch (IOException e) {
             e.printStackTrace();
         }

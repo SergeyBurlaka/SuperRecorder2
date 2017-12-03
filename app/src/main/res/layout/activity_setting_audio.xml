@@ -46,22 +46,26 @@
         android:padding="16dp">
 
         <TextView
+            android:id="@+id/tv_curr"
             android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:text="00:00"
             android:textColor="#ffffff" />
 
-        <android.support.v7.widget.AppCompatSeekBar
-            android:id="@+id/bg_music_volume"
+        <ProgressBar
+            android:layout_gravity="center_vertical"
+            android:id="@+id/pb_duration"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="2dp"
             android:layout_weight="1"
-            android:maxHeight="2dp"
-            android:progress="20"
-            android:progressDrawable="@drawable/my_seek_bar_bg"
-            android:thumb="@drawable/drawable_circle" />
+            android:maxHeight="1dp"
+            android:progress="0"
+            android:max="100"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:progressDrawable="@drawable/my_seek_bar_bg" />
 
         <TextView
+            android:id="@+id/tv_length"
             android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:gravity="right"

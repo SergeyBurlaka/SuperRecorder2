@@ -30,8 +30,8 @@ public class MainActivity extends BaseActivity {
         });
 
         findViewById(R.id.btnFiles).setOnClickListener(view -> {
-            Intent intent = new Intent(MainActivity.this, ComplexActivity.class);
-            startActivity(intent);
+//            Intent intent = new Intent(MainActivity.this, ComplexActivity.class);
+//            startActivity(intent);
         });
     }
 

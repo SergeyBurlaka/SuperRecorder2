@@ -25,6 +25,7 @@ public class RecorderUtil {
     private RecorderUtil() {
     }
 
+
     public interface OnVolumeChangeListener {
         void onVolumeChanged(double volume);
     }
@@ -71,6 +72,10 @@ public class RecorderUtil {
         }
         mAudioRecord.startRecording();
         isRecording = true;
+        if (recordingThread != null && !recordingThread.isInterrupted() && recordingThread.isAlive()) {
+            recordingThread.interrupt();
+            recordingThread = null;
+        }
         recordingThread = new Thread(new Runnable() {
             public void run() {
                 writeAudioDataToFile(append);
@@ -91,7 +96,7 @@ public class RecorderUtil {
     }
 
 
-    void appendBlankData(float time,String filePath) {
+    void appendBlankData(float time, String filePath) {
 //        LogUtils.w("add empty data.");
         FileOutputStream os = null;
         try {
@@ -141,26 +146,30 @@ public class RecorderUtil {
         if (os == null) {
             return;
         }
+        synchronized (this) {
+            while (isRecording) {
+                // gets the voice output from microphone to byte format
+                int readSize = mAudioRecord.read(sData, 0, bufferSizeInBytes / 2);
+                calculateRealVolume(sData, readSize);
+                try {
+                    // writes the data to file from buffer stores the voice buffer
+                    byte bData[] = short2byte(sData);
+                    os.write(bData, 0, bufferSizeInBytes);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
 
-        while (isRecording) {
-            // gets the voice output from microphone to byte format
-            int readSize = mAudioRecord.read(sData, 0, bufferSizeInBytes / 2);
-            calculateRealVolume(sData, readSize);
             try {
-                // writes the data to file from buffer stores the voice buffer
-                byte bData[] = short2byte(sData);
-                os.write(bData, 0, bufferSizeInBytes);
+                os.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-
-        try {
-            os.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
+
+
+
 
     private void calculateRealVolume(short[] mPCMBuffer, int readSize) {
         long v = 0;
