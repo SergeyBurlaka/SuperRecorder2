@@ -113,11 +113,44 @@ public class SettingAudioActivity extends BaseActivity {
         });
 
         findViewById(R.id.ctv_save).setOnClickListener(v -> {
-//            if (myMediaPlayer != null) {
-//                ToastUtils.showShort("已保存到：" + base + "/mix" + time + ".mp3");
-//            } else {
-//                ToastUtils.showShort("文件已被清理，请返回录制！");
-//            }
+            showDialog("转码中……");
+            Observable.just(true)
+                    .map(new Func1<Boolean, String>() {
+                        @Override
+                        public String call(Boolean aBoolean) {
+                            PCM2Mp3Cmd.Builder builder = new PCM2Mp3Cmd.Builder();
+                            String time = String.valueOf(System.currentTimeMillis());
+                            Command command = builder.setChannel(1)
+                                    .setInputFile(base + "/mix.pcm")
+                                    .setOutputFile(base + "/mix" + time + ".mp3")
+                                    .setRate(44100)
+                                    .build();
+                            LogUtils.d("cast cmd=" + command.getCommand());
+                            int ret = FFmpegBox.getInstance().execute(command);
+                            return base + "/mix" + time + ".mp3";
+                        }
+                    })
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Subscriber<String>() {
+                        @Override
+                        public void onCompleted() {
+                            dismissProgressDialog();
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                            ToastUtils.showShort(e.getMessage());
+                            dismissProgressDialog();
+                        }
+
+                        @Override
+                        public void onNext(String aBoolean) {
+                            ToastUtils.showLong("已保存到" + aBoolean);
+                        }
+                    });
+
+
         });
 
         tvLength.setText(getFormatedLenght(getLength()));
@@ -161,7 +194,7 @@ public class SettingAudioActivity extends BaseActivity {
         byte[] bytes = new byte[0];
         try {
             int fileLength = (int) getFileLength(fileName);
-            if (fileLength == -1){
+            if (fileLength == -1) {
                 finish();
                 ToastUtils.showShort("暂无录音文件！");
                 return new byte[0];
