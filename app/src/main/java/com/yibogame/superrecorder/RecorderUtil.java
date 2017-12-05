@@ -27,7 +27,7 @@ public class RecorderUtil {
 
 
     public interface OnVolumeChangeListener {
-        void onVolumeChanged(double volume);
+        void onVolumeChanged(int readSize, double volume);
     }
 
     private AudioRecord mAudioRecord;
@@ -96,6 +96,28 @@ public class RecorderUtil {
     }
 
 
+    void appendBlankData(byte[] bytes, String filePath) {
+        FileOutputStream os = null;
+        try {
+            os = new FileOutputStream(filePath, true);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        if (os == null) {
+            return;
+        }
+        try {
+            os.write(bytes, 0, bytes.length);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try {
+            os.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     void appendBlankData(float time, String filePath) {
 //        LogUtils.w("add empty data.");
         FileOutputStream os = null;
@@ -112,16 +134,15 @@ public class RecorderUtil {
 //            LogUtils.d("ready to add!");
             // writes the data to file from buffer stores the voice buffer
             byte bData[] = new byte[(int) (88200 * time)];//44100*16*1/8
-            for (int i = 0; i < bData.length; i++) {
-                bData[i] = 0;
-            }
+//            for (int i = 0; i < bData.length; i++) {
+//                bData[i] = 0;
+//            }
             os.write(bData, 0, bData.length);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         try {
-//            LogUtils.d("add finish!");
             os.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -150,10 +171,12 @@ public class RecorderUtil {
             while (isRecording) {
                 // gets the voice output from microphone to byte format
                 int readSize = mAudioRecord.read(sData, 0, bufferSizeInBytes / 2);
+
                 calculateRealVolume(sData, readSize);
                 try {
                     // writes the data to file from buffer stores the voice buffer
                     byte bData[] = short2byte(sData);
+//                    LogUtils.d("readSize=" + readSize + ",bufferSizeInBytes=" + bufferSizeInBytes + ",bData.length=" + bData.length);
                     os.write(bData, 0, bufferSizeInBytes);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -169,8 +192,6 @@ public class RecorderUtil {
     }
 
 
-
-
     private void calculateRealVolume(short[] mPCMBuffer, int readSize) {
         long v = 0;
         // 将 buffer 内容取出，进行平方和运算
@@ -181,7 +202,7 @@ public class RecorderUtil {
         double mean = v / (double) readSize;
         double volume = 10 * Math.log10(mean);
         if (onVolumeChangeListener != null) {
-            onVolumeChangeListener.onVolumeChanged(volume);
+            onVolumeChangeListener.onVolumeChanged(mPCMBuffer.length * 2, volume);
         }
     }
 

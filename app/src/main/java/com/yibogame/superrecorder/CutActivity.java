@@ -206,7 +206,7 @@ public class CutActivity extends BaseActivity {
         }
     }
 
-    private double calculateVolume(byte[] buffer) {
+    public static double calculateVolume(byte[] buffer) {
         double sumVolume = 0.0;
         double avgVolume = 0.0;
         double volume = 0.0;

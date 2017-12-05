@@ -16,6 +16,7 @@ import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.AppCompatSeekBar;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.ProgressBar;
@@ -65,13 +66,16 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
     private MediaPlayer myMediaPlayer;
     private AudioManager mAudioManager;
-    private int currMusicVolume = -1;
+    private float currMusicVolume = -1;
     private int bgLength = 52;
     private int currBgLength = 52;
     private Visualizer visualizer;
 
     private boolean isPlaying = false;
     private int recordingTime;
+
+    private float volumeFactor;
+    private CutView cutView;
 
 
     private Thread threadAddBlankVoice, threadAddBlankBg;
@@ -170,6 +174,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
 
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        cutView = findViewById(R.id.cutview);
         rxPermissions = new RxPermissions(this);
         tvBGDuration = findViewById(R.id.tv_duration_of_bg);
         switchButton = findViewById(R.id.switch_button);
@@ -188,9 +193,9 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 tvBgMusicVolume.setText(String.valueOf(i));
                 if (mAudioManager != null) {
-                    mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, i, 0);
+                    mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (i / volumeFactor), 0);
                 }
-                currMusicVolume = i;
+                currMusicVolume = (float) i;
             }
 
             @Override
@@ -279,14 +284,13 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
         int mVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         if (currMusicVolume == -1) {
-            currMusicVolume = mVolume;
-            tvBgMusicVolume.setText(String.valueOf(mVolume));
-        } else {
-            tvBgMusicVolume.setText(String.valueOf(currMusicVolume));
+            currMusicVolume = mVolume * volumeFactor;
         }
         int maxVolume = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-        mACSBMusicVolume.setMax(maxVolume);
-        mACSBMusicVolume.setProgress(currMusicVolume);
+        volumeFactor = 100f / maxVolume;
+        tvBgMusicVolume.setText(String.valueOf((int) currMusicVolume));
+        mACSBMusicVolume.setMax(100);
+        mACSBMusicVolume.setProgress((int) (currMusicVolume));
 
         RxView.clicks(findViewById(R.id.tv_change_bg))
                 .subscribe(o -> {
@@ -409,6 +413,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     private boolean isVoiceThreadInterrupted = false, isBGMThreadInterrupted;
 
     String base = Environment.getExternalStorageDirectory().getPath();
+    private long lastMills;
 
     private void requestPermissionToStartVoiceRecord() {
         rxPermissions.request(Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -434,7 +439,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     }
 
                     if (currMusicVolume != -1) {
-                        mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currMusicVolume, 0);
+                        mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (currMusicVolume / volumeFactor), 0);
                     }
                     //暂停后的开始
                     if (myMediaPlayer != null) {
@@ -462,10 +467,18 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                                 LogUtils.e("MediaPlayer onCompletion!");
                                 bgLength = 52;
                                 currBgLength = bgLength;
+                                lastMills = 0;
                             }
                         });
+                        myMediaPlayer.setOnBufferingUpdateListener(new MediaPlayer.OnBufferingUpdateListener() {
+                            @Override
+                            public void onBufferingUpdate(MediaPlayer mp, int percent) {
+                                LogUtils.d("percent=" + percent);
+                            }
+                        });
+
                         visualizer = new Visualizer(myMediaPlayer.getAudioSessionId());
-                        visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[1]);
+                        visualizer.setCaptureSize(Visualizer.getMaxCaptureRate());
                         visualizer.setDataCaptureListener(new Visualizer.OnDataCaptureListener() {
                             @Override
                             public void onWaveFormDataCapture(Visualizer visualizer, byte[] bytes, int i) {
@@ -474,6 +487,22 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
                             @Override
                             public void onFftDataCapture(Visualizer visualizer, byte[] bytes, int i) {
+                                if (myMediaPlayer == null) {
+                                    return;
+                                }
+                                int mills = myMediaPlayer.getCurrentPosition();
+                                if (mills - lastMills <= 0) {
+                                    lastMills = 0;
+                                    return;
+                                }
+                                if (recordStatus != RecordStatus.RECORDING) {
+                                    RecorderUtil.getInstance().appendBlankData((float) (mills - lastMills) / 1000f, base + Config.tempMicFileName);
+//                                    RecorderUtil.getInstance().appendBlankData(new byte[bytes.length], base + Config.tempMicFileName);
+                                }
+                                RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, lastMills, mills - lastMills, (float) currMusicVolume / 100f, true);
+                                lastMills = mills;
+//                                RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, bytes.length, currMusicVolume / 100f, true);
+//                                RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currMusicVolume / 100f, true);
 //                                LogUtils.d("bytes[10]=" + bytes[10]);
 //                                RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currMusicVolume / (float) mACSBMusicVolume.getMax(), true);
                                 updateVisualizer(bytes);
@@ -569,10 +598,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
     private int mSpectrumNum = 6;
 
-    /***
-     * 因为频谱可分1024个，但是这里需求的是只有一个频谱展示的地方，那就只能做几个（随便取6个）采样，然后取一个平均值了.很显然，这个值肯定不能代表全部所以会看上去不准确
-     * @param fft
-     */
+
     public void updateVisualizer(byte[] fft) {
         byte[] model = new byte[fft.length / 2 + 1];
         model[0] = (byte) Math.abs(fft[0]);
@@ -582,6 +608,13 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             j++;
         }
         int height = (model[0] + model[1] + model[2] + model[3] + model[4] + model[5]) / mSpectrumNum;
+//        double sum=0;
+//        for (int i = 0; i < fft.length/2; i++) {
+//            double y = (fft[i*2] | fft[i*2+1] << 8) / 32768.0;
+//            sum += y * y;
+//        }
+//        double rms = Math.sqrt(sum / fft.length/2);
+//        int dbAmp = (int) (20.0*Math.log10(rms));
         pbBg.setProgress(height);
     }
 
@@ -590,8 +623,15 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     public void startVoiceRecord() {
         RecorderUtil.getInstance().startRecording(MediaRecorder.AudioSource.MIC, base + Config.tempMicFileName, true, new RecorderUtil.OnVolumeChangeListener() {
             @Override
-            public void onVolumeChanged(double volume) {
+            public void onVolumeChanged(int readSize, double volume) {
                 pbMic.setProgress((int) volume);
+                if (!isPlaying) {
+                    byte[] bytes = new byte[readSize];
+                    RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currMusicVolume / 100f, true);
+                }
+//                else {
+//                    RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, readSize, currMusicVolume / 100f, true);
+//                }
             }
         });
     }
@@ -644,67 +684,75 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     Subscription subscription;
 
     private void startWriteEmptyBgmThread() {
-        if (threadAddBlankBg != null && threadAddBlankBg.isAlive() && !threadAddBlankBg.isInterrupted()) {
-            return;
-        }
-        threadAddBlankBg = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (!isBGMThreadInterrupted) {
-                    try {
-                        long preMills = System.currentTimeMillis();
-                        LogUtils.d("(float) needSleepBg / 1000f=" + ((float) needSleepBg / 1000f));
-                        if (recordStatus != RecordStatus.RECORDING) {
-                            RecorderUtil.getInstance().appendBlankData((float) needSleepBg / 1000f, base + Config.tempMicFileName);
-//                            needSleepBg = needSleepBg - (System.currentTimeMillis() - preMills);
-//                            needSleepBg = needSleepBg > 0 ? needSleepBg : 0;
-                        }
-
+//        if (threadAddBlankBg != null && threadAddBlankBg.isAlive() && !threadAddBlankBg.isInterrupted()) {
+//            return;
+//        }
+//        if (threadAddBlankBg != null || threadAddBlankBg == null) {
+//            return;
+//        }
+//        threadAddBlankBg = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                while (!isBGMThreadInterrupted) {
+//                    try {
 //                        long preMills = System.currentTimeMillis();
-                        if (!isPlaying) {
-                            long preMills2 = System.currentTimeMillis();
-                            RecorderUtil.getInstance().appendBlankData((float) needSleepBg / 1000f, base + Config.tempBgFileName);
-//                            needSleepBg = needSleepBg - (System.currentTimeMillis() - preMills2);
-//                            needSleepBg = needSleepBg > 0 ? needSleepBg : 0;
-                            totalNeedSleep += needSleepBg;
-                        } else {
-//                            needSleepBg = 1000;
-                            if (totalNeedSleep >= 52000) {
-                                totalNeedSleep = 0;
-                            }
-                            totalNeedSleep += needSleepBg;
-//                            LogUtils.i("currMusicVolume=" + currMusicVolume + ",mACSBMusicVolume.getMax()=" + mACSBMusicVolume.getMax() + ",divide=" + ((float) currMusicVolume / mACSBMusicVolume.getMax()));
-                            long preMills3 = System.currentTimeMillis();
-                            RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, totalNeedSleep - needSleepBg, needSleepBg, (float) currMusicVolume / mACSBMusicVolume.getMax(), true);
-//                            needSleepBg = needSleepBg - (System.currentTimeMillis() - preMills3);
-//                            needSleepBg = needSleepBg > 0 ? needSleepBg : 0;
-                        }
-                        try {
-                            byte[] bytesBg = RecordBgMusicUtil.getInstance().readSDFile(base + Config.tempBgFileName, (int) ((totalNeedSleep - needSleepBg) / 1000f * 88200), (int) (needSleepBg / 1000f * 88200), -1);
-                            byte[] bytesMic = RecordBgMusicUtil.getInstance().readSDFile(base + Config.tempMicFileName, (int) ((totalNeedSleep - needSleepBg) / 1000f * 88200), (int) (needSleepBg / 1000f * 88200), -1);
-                            byte[][] bytes = new byte[][]{bytesBg, bytesMic};
-                            byte[] result = MixUtil.getInstance().averageMix(bytes);
-//                            LogUtils.d("bytesBg.length=" + bytesBg.length + ",bytesMic.length=" + bytesMic.length + "," + "result.length=" + result.length);
-                            RecordBgMusicUtil.getInstance().writeAudioDataToFile(base + "/mix.pcm", result, true);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        recordingTime += 1000;
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                tvDuration.setText(getFormatedLenght(recordingTime / 1000));
-                            }
-                        });
-                        Thread.sleep(needSleepBg);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        isBGMThreadInterrupted = true;
-                    }
-                }
-            }
-        });
-        threadAddBlankBg.start();
+////                        LogUtils.d("(float) needSleepBg / 1000f=" + ((float) needSleepBg / 1000f));
+//                        if (recordStatus != RecordStatus.RECORDING) {
+//                            RecorderUtil.getInstance().appendBlankData((float) needSleepBg / 1000f, base + Config.tempMicFileName);
+//                        }
+//
+////                        long preMills = System.currentTimeMillis();
+//                        if (!isPlaying) {
+//                            long preMills2 = System.currentTimeMillis();
+//                            RecorderUtil.getInstance().appendBlankData((float) needSleepBg / 1000f, base + Config.tempBgFileName);
+////                            needSleepBg = needSleepBg - (System.currentTimeMillis() - preMills2);
+////                            needSleepBg = needSleepBg > 0 ? needSleepBg : 0;
+//                            totalNeedSleep += needSleepBg;
+//                        } else {
+////                            needSleepBg = 1000;
+//                            if (totalNeedSleep >= 52000) {
+//                                totalNeedSleep = 0;
+//                            }
+//                            totalNeedSleep += needSleepBg;
+//                            long preMills3 = System.currentTimeMillis();
+//                            RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, totalNeedSleep - needSleepBg, needSleepBg, (float) currMusicVolume / 100f, true);
+////                            needSleepBg = needSleepBg - (System.currentTimeMillis() - preMills3);
+////                            needSleepBg = needSleepBg > 0 ? needSleepBg : 0;
+//                        }
+//                        try {
+//                            byte[] bytesBg = RecordBgMusicUtil.getInstance().readSDFile(base + Config.tempBgFileName, (int) ((totalNeedSleep - needSleepBg) / 1000f * 88200), (int) (needSleepBg / 1000f * 88200), -1);
+//                            byte[] bytesMic = RecordBgMusicUtil.getInstance().readSDFile(base + Config.tempMicFileName, (int) ((totalNeedSleep - needSleepBg) / 1000f * 88200), (int) (needSleepBg / 1000f * 88200), -1);
+//                            byte[][] bytes = new byte[][]{bytesBg, bytesMic};
+//                            byte[] result = MixUtil.getInstance().averageMix(bytes);
+//                            double volume = CutActivity.calculateVolume(result);
+//                            runOnUiThread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    long pre = System.currentTimeMillis();
+//                                    cutView.addVolume(volume);
+//                                }
+//                            });
+////                            LogUtils.d("bytesBg.length=" + bytesBg.length + ",bytesMic.length=" + bytesMic.length + "," + "result.length=" + result.length);
+//                            RecordBgMusicUtil.getInstance().writeAudioDataToFile(base + "/mix.pcm", result, true);
+//                        } catch (IOException e) {
+//                            e.printStackTrace();
+//                        }
+//                        recordingTime += 1000;
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                tvDuration.setText(getFormatedLenght(recordingTime / 1000));
+//                            }
+//                        });
+//                        Thread.sleep(needSleepBg);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                        isBGMThreadInterrupted = true;
+//                    }
+//                }
+//            }
+//        });
+//        threadAddBlankBg.start();
 
     }
 
@@ -738,6 +786,33 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         deleteTempFiles();
         setPlaying(false);
         setRecordStatus(RecordStatus.NONE);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_VOLUME_UP:
+                mAudioManager.adjustStreamVolume(
+                        AudioManager.STREAM_MUSIC,
+                        AudioManager.ADJUST_RAISE,
+                        AudioManager.FLAG_PLAY_SOUND);
+                currMusicVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC) * volumeFactor;
+                mACSBMusicVolume.setProgress((int) (currMusicVolume));
+                return true;
+//                break;
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+                mAudioManager.adjustStreamVolume(
+                        AudioManager.STREAM_MUSIC,
+                        AudioManager.ADJUST_LOWER,
+                        AudioManager.FLAG_PLAY_SOUND);
+                currMusicVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC) * volumeFactor;
+                mACSBMusicVolume.setProgress((int) (currMusicVolume));
+                return true;
+//                break;
+            default:
+                break;
+        }
+        return super.onKeyDown(keyCode, event);
     }
 }
 

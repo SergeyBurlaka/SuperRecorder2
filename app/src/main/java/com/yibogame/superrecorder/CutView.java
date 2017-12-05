@@ -4,10 +4,14 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.support.annotation.Nullable;
+import android.util.AttributeSet;
 import android.view.View;
 
+import com.blankj.utilcode.util.ConvertUtils;
 import com.blankj.utilcode.util.LogUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -28,6 +32,11 @@ public class CutView extends View {
 
     public void setListVolume(List<Double> listVolume) {
         this.listVolume = listVolume;
+    }
+
+    public void addVolume(double volume) {
+        this.listVolume.add(volume);
+        requestLayout();
     }
 
     public void setRange(float[] range) {
@@ -71,10 +80,27 @@ public class CutView extends View {
         this.mHeight = height;
         this.listVolume = listVolume;
 
+        initPaint();
+    }
+
+    public CutView(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+        this.mHeight = ConvertUtils.dp2px(46);
+        this.listVolume = new ArrayList<>();
+        initPaint();
+    }
+
+    public CutView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        this.mHeight = ConvertUtils.dp2px(46);
+        this.listVolume = new ArrayList<>();
+        initPaint();
+    }
+
+    private void initPaint() {
         mPaint = new Paint();
         mPaint.setColor(colorDefault);
     }
-
 
     private int getMySize(int defaultSize, int measureSpec) {
         int mySize = defaultSize;
@@ -122,10 +148,12 @@ public class CutView extends View {
             int height = (int) (listVolume.get(i) / max * getMeasuredHeight());
             height = height > getMeasuredHeight() ? getMeasuredHeight() : height;
             int offset = i * (widthPerLine + space);
-            if (offset < start || offset > end) {
-                mPaint.setColor(colorDefault);
-            } else {
-                mPaint.setColor(colorAccent);
+            if (start != 0) {
+                if (offset < start || offset > end) {
+                    mPaint.setColor(colorDefault);
+                } else {
+                    mPaint.setColor(colorAccent);
+                }
             }
             canvas.drawRect(offset, getMeasuredHeight() - height, offset + widthPerLine, getMeasuredHeight(), mPaint);
         }

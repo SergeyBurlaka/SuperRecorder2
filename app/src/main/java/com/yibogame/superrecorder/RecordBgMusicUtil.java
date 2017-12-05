@@ -1,5 +1,6 @@
 package com.yibogame.superrecorder;
 
+import com.blankj.utilcode.util.FileUtils;
 import com.blankj.utilcode.util.LogUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -26,7 +27,18 @@ public class RecordBgMusicUtil {
 
         int offset = (int) (88200 * ((float) (skipMills) / 1000f));
         int length = (int) (88200 * ((float) (readTimeMill) / 1000f));
-//        LogUtils.d("skipMills=" + skipMills + ",readTimeMill=" + readTimeMill + ",offset=" + offset + ",length=" + length);
+        LogUtils.d("skipMills=" + skipMills + ",readTimeMill=" + readTimeMill + ",offset=" + offset + ",length=" + length+",aaaaa="+((float) (skipMills) / 1000f));
+        try {
+            byte[] bytes = readSDFile(oriBgPath, offset, length, volumePercent);
+            writeAudioDataToFile(filePath, bytes, append);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void appendMusic(String oriBgPath, String filePath, long needWriteBytes, float volumePercent, boolean append) {
+        long offset = FileUtils.getFileLength(filePath);
+        int length = (int) needWriteBytes;
         try {
             byte[] bytes = readSDFile(oriBgPath, offset, length, volumePercent);
             writeAudioDataToFile(filePath, bytes, append);
@@ -46,7 +58,7 @@ public class RecordBgMusicUtil {
      * @return
      * @throws IOException
      */
-    public byte[] readSDFile(String fileName, int offset, int length, float db) throws IOException {
+    public byte[] readSDFile(String fileName, long offset, int length, float db) throws IOException {
 //        byte[] bytesForReturn = null;
         byte[] bytes = new byte[length];
         ByteArrayOutputStream arrayOutputStream = null;
@@ -54,9 +66,20 @@ public class RecordBgMusicUtil {
         try {
             FileInputStream inputStream = new FileInputStream(fileName);
             arrayOutputStream = new ByteArrayOutputStream();
-
-            long actualSkiped = inputStream.skip(offset);
+            long actualSkiped = inputStream.skip(offset % FileUtils.getFileLength(fileName));
+//            LogUtils.d("offset=" + offset);
+//            if (actualSkiped == -1 || actualSkiped < offset % FileUtils.getFileLength(fileName)) {
+//                if (inputStream.markSupported()) {
+//                    inputStream.reset();
+//                }
+//                long firstRead = FileUtils.getFileLength(fileName) - offset % FileUtils.getFileLength(fileName);
+//                actualSkiped = inputStream.skip(firstRead);
+//                offset = offset - firstRead;
+//                actualSkiped = inputStream.skip(offset);
+//                int read = inputStream.read(bytes, (int) firstRead, (int) offset);
+//            } else {
             int read = inputStream.read(bytes, 0, length);
+//            }
             if (db != -1) {
                 bytes = VolumeUtil.getInstance().resetVolume(bytes, db);
             }
