@@ -243,8 +243,9 @@ public class PCMPlayerActivity extends BaseActivity {
         } finally {
             try {
                 for (FileInputStream in : audioFileStreams) {
-                    if (in != null)
+                    if (in != null) {
                         in.close();
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -259,13 +260,14 @@ public class PCMPlayerActivity extends BaseActivity {
      */
     private byte[] averageMix(byte[][] bMulRoadAudioes) {
 
-        if (bMulRoadAudioes == null || bMulRoadAudioes.length == 0)
+        if (bMulRoadAudioes == null || bMulRoadAudioes.length == 0) {
             return null;
+        }
         byte[] realMixAudio = bMulRoadAudioes[0];
 
-        if (bMulRoadAudioes.length == 1)
+        if (bMulRoadAudioes.length == 1) {
             return realMixAudio;
-
+        }
         for (int rw = 0; rw < bMulRoadAudioes.length; ++rw) {
             if (bMulRoadAudioes[rw].length != realMixAudio.length) {
                 Log.e("app", "column of the road of audio + " + rw + " is diffrent.");
