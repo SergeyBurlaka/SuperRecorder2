@@ -48,7 +48,9 @@ import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 /**
- * Created by parcool on 2017/11/25.
+ *
+ * @author parcool
+ * @date 2017/11/25
  */
 
 public class RecordActivity extends BaseActivity implements IRecordListener {
