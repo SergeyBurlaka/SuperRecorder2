@@ -37,6 +37,15 @@ public class RecorderUtil {
     private String mFilePath;
     private Thread recordingThread = null;
     private OnVolumeChangeListener onVolumeChangeListener;
+    private boolean isReallyRecord;
+
+    public boolean isReallyRecord() {
+        return isReallyRecord;
+    }
+
+    public void setReallyRecord(boolean reallyRecord) {
+        isReallyRecord = reallyRecord;
+    }
 
     public int getAudioSource() {
         return audioSource;
@@ -78,21 +87,25 @@ public class RecorderUtil {
         }
         recordingThread = new Thread(new Runnable() {
             public void run() {
-                writeAudioDataToFile(append);
+                writeAudioDataToFile(append, isReallyRecord);
             }
         }, "AudioRecorder Thread");
         recordingThread.start();
     }
 
     void stopRecording() {
+        if (recordingThread != null && recordingThread.isAlive() && !recordingThread.isInterrupted()) {
+            recordingThread.interrupt();
+            recordingThread = null;
+        }
         // stops the recording activity
         if (null != mAudioRecord) {
             isRecording = false;
             mAudioRecord.stop();
             mAudioRecord.release();
             mAudioRecord = null;
-            recordingThread = null;
         }
+
     }
 
 
@@ -154,7 +167,7 @@ public class RecorderUtil {
     }
 
 
-    private void writeAudioDataToFile(boolean append) {
+    private void writeAudioDataToFile(boolean append, boolean isReallyRecord) {
         // Write the output audio in byte
         String filePath = mFilePath;
         short sData[] = new short[bufferSizeInBytes / 2];
@@ -171,15 +184,23 @@ public class RecorderUtil {
             while (isRecording) {
                 // gets the voice output from microphone to byte format
                 int readSize = mAudioRecord.read(sData, 0, bufferSizeInBytes / 2);
-
-                calculateRealVolume(sData, readSize);
-                try {
-                    // writes the data to file from buffer stores the voice buffer
-                    byte bData[] = short2byte(sData);
+                if (isReallyRecord) {
+                    calculateRealVolume(sData, readSize);
+                    try {
+                        // writes the data to file from buffer stores the voice buffer
+                        byte bData[] = short2byte(sData);
 //                    LogUtils.d("readSize=" + readSize + ",bufferSizeInBytes=" + bufferSizeInBytes + ",bData.length=" + bData.length);
-                    os.write(bData, 0, bufferSizeInBytes);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                        os.write(bData, 0, bufferSizeInBytes);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    byte[] bytes = new byte[sData.length * 2];
+                    try {
+                        os.write(bytes, 0, bufferSizeInBytes);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
 

@@ -25,11 +25,13 @@ public class RecordBgMusicUtil {
 
     void appendMusic(String oriBgPath, String filePath, long skipMills, long readTimeMill, float volumePercent, boolean append) {
 
-        int offset = (int) (88200 * ((float) (skipMills) / 1000f));
-        int length = (int) (88200 * ((float) (readTimeMill) / 1000f));
-        LogUtils.d("skipMills=" + skipMills + ",readTimeMill=" + readTimeMill + ",offset=" + offset + ",length=" + length+",aaaaa="+((float) (skipMills) / 1000f));
+//        int offset = (int) (88200 * ((float) (skipMills) / 1000f));
+//        int length = (int) (88200 * ((float) (readTimeMill) / 1000f));
+//        LogUtils.d("skipMills=" + skipMills + ",readTimeMill=" + readTimeMill + ",offset=" + offset + ",length=" + length + ",aaaaa=" + ((float) (skipMills) / 1000f));
         try {
-            byte[] bytes = readSDFile(oriBgPath, offset, length, volumePercent);
+//            byte[] bytes = readSDFile(oriBgPath, offset, length, volumePercent);
+//            writeAudioDataToFile(filePath, bytes, append);
+            byte[] bytes = readSDFile(oriBgPath, skipMills, (int) readTimeMill, volumePercent);
             writeAudioDataToFile(filePath, bytes, append);
         } catch (IOException e) {
             e.printStackTrace();
@@ -66,7 +68,7 @@ public class RecordBgMusicUtil {
         try {
             FileInputStream inputStream = new FileInputStream(fileName);
             arrayOutputStream = new ByteArrayOutputStream();
-            long actualSkiped = inputStream.skip(offset % FileUtils.getFileLength(fileName));
+            long actualSkiped = inputStream.skip(FileUtils.getFileLength(fileName) == 0 ? offset : offset % FileUtils.getFileLength(fileName));
 //            LogUtils.d("offset=" + offset);
 //            if (actualSkiped == -1 || actualSkiped < offset % FileUtils.getFileLength(fileName)) {
 //                if (inputStream.markSupported()) {
