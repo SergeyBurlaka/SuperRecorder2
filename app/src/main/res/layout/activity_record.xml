@@ -123,8 +123,8 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:maxHeight="2dp"
-            android:progress="7"
-            android:max="15"
+            android:progress="60"
+            android:max="100"
             android:progressDrawable="@drawable/my_seek_bar_bg"
             android:thumb="@drawable/drawable_circle" />
 

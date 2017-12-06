@@ -43,12 +43,10 @@ import rx.Subscriber;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action0;
-import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 /**
- *
  * @author parcool
  * @date 2017/11/25
  */
@@ -68,7 +66,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
     private MediaPlayer myMediaPlayer;
     private AudioManager mAudioManager;
-    private float currMusicVolume = -1;
+    private float currVolume = 0.6f;
     private int bgLength = 52;
     private int currBgLength = 52;
     private Visualizer visualizer;
@@ -76,7 +74,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     private boolean isPlaying = false;
     private int recordingTime;
 
-    private float volumeFactor;
+    //    private float volumeFactor;
     private CutView cutView;
 
 
@@ -190,14 +188,22 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         tvDuration.setTypeface(typeface);
         tvBgMusicVolume = findViewById(R.id.tv_bg_music_volume);
         mACSBMusicVolume = findViewById(R.id.bg_music_volume);
+        mACSBMusicVolume.setProgress((int) (currVolume * 100));
         mACSBMusicVolume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 tvBgMusicVolume.setText(String.valueOf(i));
-                if (mAudioManager != null) {
-                    mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (i / volumeFactor), 0);
+                currVolume = i / 100f;
+                try {
+                    myMediaPlayer.setVolume(currVolume, currVolume);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                currMusicVolume = (float) i;
+                //下面几句代码后面可以注释
+//                if (mAudioManager != null) {
+//                    mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (i / volumeFactor), 0);
+//                }
+//                currMusicVolumeOri = (float) i;
             }
 
             @Override
@@ -211,7 +217,6 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             }
         });
 
-        tvBgMusicVolume.setText(String.valueOf(mACSBMusicVolume.getProgress()));
         //下一步
         RxView.clicks(findViewById(R.id.ctv_next))
                 .throttleFirst(500, TimeUnit.MILLISECONDS)
@@ -246,7 +251,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     startActivity(intent);
                 });
         ctvRecordPause = findViewById(R.id.ctv_record_pause);
-        //录制按钮
+        //录制/暂停/继续的那个按钮
         RxView.clicks(ctvRecordPause)
                 .throttleFirst(200, TimeUnit.MILLISECONDS)
                 .subscribe(o -> {
@@ -284,15 +289,13 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             }
         });
 
-        int mVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        if (currMusicVolume == -1) {
-            currMusicVolume = mVolume * volumeFactor;
-        }
-        int maxVolume = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-        volumeFactor = 100f / maxVolume;
-        tvBgMusicVolume.setText(String.valueOf((int) currMusicVolume));
-        mACSBMusicVolume.setMax(100);
-        mACSBMusicVolume.setProgress((int) (currMusicVolume));
+//        int mVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+//        if (currMusicVolumeOri == -1) {
+//            currMusicVolumeOri = mVolume * volumeFactor;
+//        }
+//        int maxVolume = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+//        volumeFactor = 100f / maxVolume;
+        tvBgMusicVolume.setText(String.valueOf((int) (currVolume * 100)));
 
         RxView.clicks(findViewById(R.id.tv_change_bg))
                 .subscribe(o -> {
@@ -383,6 +386,8 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     private void setVoiceRecorderUI() {
         switch (recordStatus) {
             case NONE:
+                currVolume = 0.6f;
+                mACSBMusicVolume.setProgress((int) (currVolume * 100));
                 ctvRecordPause.setDrawableTop(R.mipmap.ic_recorder);
                 ctvRecordPause.setText("录音");
                 pbMic.post(new Runnable() {
@@ -393,6 +398,8 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                 });
                 break;
             case PAUSE:
+                currVolume = 0.6f;
+                mACSBMusicVolume.setProgress((int) (currVolume * 100));
                 ctvRecordPause.setDrawableTop(R.mipmap.ic_recorder);
                 ctvRecordPause.setText("继续");
                 pbMic.post(new Runnable() {
@@ -403,6 +410,8 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                 });
                 break;
             case RECORDING:
+                currVolume = 0.2f;
+                mACSBMusicVolume.setProgress((int) (currVolume * 100));
                 ctvRecordPause.setDrawableTop(R.mipmap.ic_recorde_pause);
                 ctvRecordPause.setText("暂停");
                 break;
@@ -440,9 +449,9 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                         return;
                     }
 
-                    if (currMusicVolume != -1) {
-                        mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (currMusicVolume / volumeFactor), 0);
-                    }
+//                    if (currMusicVolumeOri != -1) {
+//                        mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (currMusicVolumeOri / volumeFactor), 0);
+//                    }
                     //暂停后的开始
                     if (myMediaPlayer != null) {
                         myMediaPlayer.start();
@@ -479,6 +488,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                             }
                         });
 
+
                         visualizer = new Visualizer(myMediaPlayer.getAudioSessionId());
                         visualizer.setCaptureSize(Visualizer.getMaxCaptureRate());
                         visualizer.setDataCaptureListener(new Visualizer.OnDataCaptureListener() {
@@ -501,17 +511,18 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                                     RecorderUtil.getInstance().appendBlankData((float) (mills - lastMills) / 1000f, base + Config.tempMicFileName);
 //                                    RecorderUtil.getInstance().appendBlankData(new byte[bytes.length], base + Config.tempMicFileName);
                                 }
-                                RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, lastMills, mills - lastMills, (float) currMusicVolume / 100f, true);
+                                RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, lastMills, mills - lastMills, currVolume, true);
                                 lastMills = mills;
-//                                RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, bytes.length, currMusicVolume / 100f, true);
-//                                RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currMusicVolume / 100f, true);
+//                                RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, bytes.length, currMusicVolumeOri / 100f, true);
+//                                RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currMusicVolumeOri / 100f, true);
 //                                LogUtils.d("bytes[10]=" + bytes[10]);
-//                                RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currMusicVolume / (float) mACSBMusicVolume.getMax(), true);
+//                                RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currMusicVolumeOri / (float) mACSBMusicVolume.getMax(), true);
                                 updateVisualizer(bytes);
                             }
                         }, Visualizer.getMaxCaptureRate() / 2, false, true);
                         myMediaPlayer.setLooping(true);
                         myMediaPlayer.prepare();
+                        myMediaPlayer.setVolume(currVolume, currVolume);
 //                        myMediaPlayer.seekTo(myMediaPlayerCurrentPosition);
                         myMediaPlayer.start();
                         visualizer.setEnabled(true);
@@ -629,10 +640,10 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                 pbMic.setProgress((int) volume);
                 if (!isPlaying) {
                     byte[] bytes = new byte[readSize];
-                    RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currMusicVolume / 100f, true);
+                    RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currVolume, true);
                 }
 //                else {
-//                    RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, readSize, currMusicVolume / 100f, true);
+//                    RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, readSize, currMusicVolumeOri / 100f, true);
 //                }
             }
         });
@@ -717,7 +728,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 //                            }
 //                            totalNeedSleep += needSleepBg;
 //                            long preMills3 = System.currentTimeMillis();
-//                            RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, totalNeedSleep - needSleepBg, needSleepBg, (float) currMusicVolume / 100f, true);
+//                            RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, totalNeedSleep - needSleepBg, needSleepBg, (float) currMusicVolumeOri / 100f, true);
 ////                            needSleepBg = needSleepBg - (System.currentTimeMillis() - preMills3);
 ////                            needSleepBg = needSleepBg > 0 ? needSleepBg : 0;
 //                        }
@@ -790,31 +801,5 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         setRecordStatus(RecordStatus.NONE);
     }
 
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_VOLUME_UP:
-                mAudioManager.adjustStreamVolume(
-                        AudioManager.STREAM_MUSIC,
-                        AudioManager.ADJUST_RAISE,
-                        AudioManager.FLAG_PLAY_SOUND);
-                currMusicVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC) * volumeFactor;
-                mACSBMusicVolume.setProgress((int) (currMusicVolume));
-                return true;
-//                break;
-            case KeyEvent.KEYCODE_VOLUME_DOWN:
-                mAudioManager.adjustStreamVolume(
-                        AudioManager.STREAM_MUSIC,
-                        AudioManager.ADJUST_LOWER,
-                        AudioManager.FLAG_PLAY_SOUND);
-                currMusicVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC) * volumeFactor;
-                mACSBMusicVolume.setProgress((int) (currMusicVolume));
-                return true;
-//                break;
-            default:
-                break;
-        }
-        return super.onKeyDown(keyCode, event);
-    }
 }
 
