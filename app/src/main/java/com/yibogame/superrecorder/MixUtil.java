@@ -20,12 +20,14 @@ public class MixUtil {
      * 每一行是一个音频的数据
      */
     byte[] averageMix(byte[][] bMulRoadAudioes) {
-        if (bMulRoadAudioes == null || bMulRoadAudioes.length == 0)
+        if (bMulRoadAudioes == null || bMulRoadAudioes.length == 0) {
             return null;
+        }
         byte[] realMixAudio = bMulRoadAudioes[0];
 
-        if (bMulRoadAudioes.length == 1)
+        if (bMulRoadAudioes.length == 1) {
             return realMixAudio;
+        }
 
         for (int rw = 0; rw < bMulRoadAudioes.length; ++rw) {
             if (bMulRoadAudioes[rw].length != realMixAudio.length) {

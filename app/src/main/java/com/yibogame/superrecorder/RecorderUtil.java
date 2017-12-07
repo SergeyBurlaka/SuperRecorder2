@@ -86,14 +86,16 @@ public class RecorderUtil {
             recordingThread = null;
         }
         recordingThread = new Thread(new Runnable() {
+            @Override
             public void run() {
-                writeAudioDataToFile(append, isReallyRecord);
+                writeAudioDataToFile(append);
             }
         }, "AudioRecorder Thread");
         recordingThread.start();
     }
 
     void stopRecording() {
+        LogUtils.d("stop......");
         if (recordingThread != null && recordingThread.isAlive() && !recordingThread.isInterrupted()) {
             recordingThread.interrupt();
             recordingThread = null;
@@ -167,7 +169,7 @@ public class RecorderUtil {
     }
 
 
-    private void writeAudioDataToFile(boolean append, boolean isReallyRecord) {
+    private void writeAudioDataToFile(boolean append) {
         // Write the output audio in byte
         String filePath = mFilePath;
         short sData[] = new short[bufferSizeInBytes / 2];
@@ -198,6 +200,9 @@ public class RecorderUtil {
                     byte[] bytes = new byte[sData.length * 2];
                     try {
                         os.write(bytes, 0, bufferSizeInBytes);
+                        if (onVolumeChangeListener != null) {
+                            onVolumeChangeListener.onVolumeChanged(bytes.length, 0);
+                        }
                     } catch (IOException e) {
                         e.printStackTrace();
                     }

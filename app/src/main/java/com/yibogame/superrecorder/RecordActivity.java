@@ -66,16 +66,13 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
     private MediaPlayer myMediaPlayer;
     private int mediaPlayerStatus = 0;//0:停止；1：播放中；2：暂停
-    //    private AudioManager mAudioManager;
     private float currVolume = 0.6f;
     private int bgLength = 52;
     private int currBgLength = 52;
     private Visualizer visualizer;
 
     private boolean isPlaying = false;
-    private int recordingTime;
 
-    //    private float volumeFactor;
     private CutView cutView;
 
 
@@ -112,22 +109,27 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         onDataChanged = new OnDataChanged() {
             @Override
             public void onChanged() {
+                LogUtils.d("recordStatus=" + recordStatus + ",isPlaying=" + isPlaying);
+                if (recordStatus == RecordStatus.RECORDING) {
+                    RecorderUtil.getInstance().setReallyRecord(true);
+                } else {
+                    RecorderUtil.getInstance().setReallyRecord(false);
+                }
                 if (isPlaying) {
                     playMp3();
                 } else {
                     pauseMp3();
                 }
-                if (recordStatus != RecordStatus.NONE || isPlaying) {
+                if (recordStatus == RecordStatus.RECORDING || isPlaying) {
                     requestPermissionToStartVoiceRecord();
                     startCountDownTimer();
                 } else if ((recordStatus == RecordStatus.NONE || recordStatus == RecordStatus.PAUSE) && !isPlaying) {
+                    LogUtils.e("recordStatus=" + recordStatus + ",isPlaying=" + isPlaying);
                     stopMp3();
                     stopVoiceRecord();
                     stopCountDownTimer();
                 }
-                if (recordStatus == RecordStatus.PAUSE) {
-                    RecorderUtil.getInstance().setReallyRecord(false);
-                }
+
 //                deleteTempFiles();
             }
         };
@@ -154,10 +156,8 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 tvBgMusicVolume.setText(String.valueOf(i));
                 currVolume = i / 100f;
-                try {
+                if (myMediaPlayer != null) {
                     myMediaPlayer.setVolume(currVolume, currVolume);
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
             }
 
@@ -212,12 +212,15 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                 .subscribe(o -> {
                     switch (recordStatus) {
                         case NONE:
+                            RecorderUtil.getInstance().setReallyRecord(true);
                             setRecordStatus(RecordStatus.RECORDING);
                             break;
                         case RECORDING:
+                            RecorderUtil.getInstance().setReallyRecord(false);
                             setRecordStatus(RecordStatus.PAUSE);
                             break;
                         case PAUSE:
+                            RecorderUtil.getInstance().setReallyRecord(true);
                             setRecordStatus(RecordStatus.RECORDING);
                             break;
                         default:
@@ -232,7 +235,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     setRecordStatus(RecordStatus.NONE);
                     setPlaying(false);
                 });
-        //打开音乐按钮
+        //打开音乐开关按钮
         switchButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
@@ -392,7 +395,6 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     if (granted) {
                         switch (mediaPlayerStatus) {
                             case 0:
-                                LogUtils.d("开始播放！" + myMediaPlayer);
                                 //已经停止了，准备播放吧
                                 AssetFileDescriptor fileDescriptor;
                                 try {
@@ -426,16 +428,13 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                                             updateVisualizer(bytes);
                                         }
                                     }, Visualizer.getMaxCaptureRate() / 2, false, true);
-                                    LogUtils.d("开始播放2！" + myMediaPlayer);
                                     myMediaPlayer.setLooping(true);
                                     myMediaPlayer.prepare();
                                     myMediaPlayer.start();
-                                    LogUtils.d("开始播放3！currVolume=" + currVolume + "," + myMediaPlayer);
                                     myMediaPlayer.setVolume(currVolume, currVolume);
                                     mediaPlayerStatus = 1;
                                     visualizer.setEnabled(true);
                                     switchButton.setCheckedImmediatelyNoEvent(true);
-                                    LogUtils.d("开始播放4！" + myMediaPlayer);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
@@ -565,11 +564,15 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
     @Override
     public void startVoiceRecord() {
-        RecorderUtil.getInstance().setReallyRecord(true);
         RecorderUtil.getInstance().startRecording(MediaRecorder.AudioSource.MIC, base + Config.tempMicFileName, true, new RecorderUtil.OnVolumeChangeListener() {
             @Override
             public void onVolumeChanged(int readSize, double volume) {
-                pbMic.setProgress((int) volume);
+//                LogUtils.d("RecorderUtil.getInstance().isReallyRecord()=" + RecorderUtil.getInstance().isReallyRecord());
+                if (RecorderUtil.getInstance().isReallyRecord()) {
+                    pbMic.setProgress((int) volume);
+                } else {
+                    pbMic.setProgress(0);
+                }
                 if (!isPlaying) {
                     byte[] bytes = new byte[readSize];
                     RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currVolume, true);
@@ -585,7 +588,6 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            long pre = System.currentTimeMillis();
                             cutView.addVolume(volumeMixed);
                         }
                     });
