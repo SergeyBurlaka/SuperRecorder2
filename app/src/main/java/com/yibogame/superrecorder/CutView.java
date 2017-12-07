@@ -148,13 +148,13 @@ public class CutView extends View {
             int height = (int) (listVolume.get(i) / max * getMeasuredHeight());
             height = height > getMeasuredHeight() ? getMeasuredHeight() : height;
             int offset = i * (widthPerLine + space);
-            if (start != 0) {
+//            if (start != 0) {
                 if (offset < start || offset > end) {
                     mPaint.setColor(colorDefault);
                 } else {
                     mPaint.setColor(colorAccent);
                 }
-            }
+//            }
             canvas.drawRect(offset, getMeasuredHeight() - height, offset + widthPerLine, getMeasuredHeight(), mPaint);
         }
     }

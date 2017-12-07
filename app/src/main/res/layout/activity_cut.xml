@@ -65,7 +65,6 @@
         android:textColor="#bbb4c2" />
 
     <RelativeLayout
-        android:visibility="invisible"
         android:id="@+id/rl_duration"
         android:layout_width="match_parent"
         android:layout_height="30dp"
@@ -97,8 +96,8 @@
         android:id="@+id/ll_cut"
         android:layout_width="match_parent"
         android:layout_height="120dp"
-        android:layout_alignLeft="@+id/rl_duration"
-        android:layout_alignStart="@+id/rl_duration"
+        android:layout_marginLeft="22dp"
+        android:layout_marginRight="22dp"
         android:layout_below="@+id/rl_duration"
         android:background="@mipmap/ic_record_bg"
         android:orientation="vertical">

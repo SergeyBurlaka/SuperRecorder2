@@ -1,6 +1,7 @@
 package com.yibogame.superrecorder;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -58,7 +59,6 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     private TextView tvDuration;
     private CustomTextView ctvRecordPause;
     RecordStatus recordStatus = RecordStatus.NONE;
-    //    private static final int RECORD_STATUS_NONE = 0, RECORD_STATUS_RECORDING = 1, RECORD_STATUS_PAUSE = 2;
     private RxPermissions rxPermissions;
     private ProgressBar pbMic, pbBg;
     private SwitchButton switchButton;
@@ -67,8 +67,8 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     private MediaPlayer myMediaPlayer;
     private int mediaPlayerStatus = 0;//0:停止；1：播放中；2：暂停
     private float currVolume = 0.6f;
-    private int bgLength = 52;
-    private int currBgLength = 52;
+
+    private int currBgLength = 0;
     private Visualizer visualizer;
 
     private boolean isPlaying = false;
@@ -107,6 +107,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         setContentView(R.layout.activity_record);
 
         onDataChanged = new OnDataChanged() {
+            @SuppressLint("SetTextI18n")
             @Override
             public void onChanged() {
                 LogUtils.d("recordStatus=" + recordStatus + ",isPlaying=" + isPlaying);
@@ -115,20 +116,24 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                 } else {
                     RecorderUtil.getInstance().setReallyRecord(false);
                 }
+
                 if (isPlaying) {
                     playMp3();
+                    startCountDownTimer();
                 } else {
                     pauseMp3();
-                }
-                if (recordStatus == RecordStatus.RECORDING || isPlaying) {
-                    requestPermissionToStartVoiceRecord();
-                    startCountDownTimer();
-                } else if ((recordStatus == RecordStatus.NONE || recordStatus == RecordStatus.PAUSE) && !isPlaying) {
-                    LogUtils.e("recordStatus=" + recordStatus + ",isPlaying=" + isPlaying);
-                    stopMp3();
-                    stopVoiceRecord();
                     stopCountDownTimer();
                 }
+
+                if (recordStatus == RecordStatus.RECORDING || isPlaying) {
+                    requestPermissionToStartVoiceRecord();
+                } else if ((recordStatus == RecordStatus.NONE || recordStatus == RecordStatus.PAUSE) && !isPlaying) {
+                    currBgLength = (int) (FileUtils.getFileLength(base + Config.bgFilePCM) / 88200);
+                    tvBGDuration.setText(getFormatedLenght(currBgLength));
+                    stopMp3();
+                    stopVoiceRecord();
+                }
+
 
 //                deleteTempFiles();
             }
@@ -267,6 +272,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     @Override
                     public Observable<String> call(Boolean aBoolean) {
                         if (!aBoolean) {
+                            currBgLength = (int) (FileUtils.getFileLength(base + Config.bgFilePCM) / 88200);
                             return Observable.just(null);
                         }
                         MoveAssetsToSDCardUtil.getInstance().move(RecordActivity.this, "bg_music_1.mp3", base + Config.bgFileMp3);
@@ -301,6 +307,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                 .subscribe(new Subscriber<Boolean>() {
                     @Override
                     public void onCompleted() {
+                        currBgLength = (int) (FileUtils.getFileLength(base + Config.bgFilePCM) / 88200);
                         dismissProgressDialog();
                     }
 
@@ -408,8 +415,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                                         @Override
                                         public void onCompletion(MediaPlayer mediaPlayer) {
                                             LogUtils.e("MediaPlayer onCompletion!");
-                                            bgLength = 52;
-                                            currBgLength = bgLength;
+                                            currBgLength = (int) (FileUtils.getFileLength(base + Config.bgFilePCM) / 88200);
                                         }
                                     });
                                     visualizer = new Visualizer(myMediaPlayer.getAudioSessionId());
@@ -512,17 +518,15 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         countDownTimer = new CountDownTimer(currBgLength * 1000, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
-//                LogUtils.d("millisUntilFinished=" + millisUntilFinished);
                 currBgLength = (int) (millisUntilFinished / 1000);
                 int lefts = (int) (millisUntilFinished / 1000);
-                tvBGDuration.setText("00:" + (lefts < 10 ? "0" + lefts : lefts));
+                tvBGDuration.setText(getFormatedLenght(lefts));
             }
 
             @Override
             public void onFinish() {
-                tvBGDuration.setText("00:00");
-                bgLength = 52;
-                currBgLength = bgLength;
+                tvBGDuration.setText(getFormatedLenght(0));
+                currBgLength = (int) (FileUtils.getFileLength(base + Config.bgFilePCM) / 88200);
                 startCountDownTimer();
             }
         };
@@ -588,6 +592,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            tvDuration.setText(getFormatedLenght((int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200)));
                             cutView.addVolume(volumeMixed);
                         }
                     });
@@ -629,6 +634,14 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         deleteTempFiles();
         setPlaying(false);
         setRecordStatus(RecordStatus.NONE);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (tvDuration != null) {
+            tvDuration.setText(getFormatedLenght((int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200)));
+        }
     }
 
     @Override

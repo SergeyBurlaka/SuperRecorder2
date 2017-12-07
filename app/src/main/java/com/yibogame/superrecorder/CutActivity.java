@@ -27,7 +27,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import rx.Observable;
+import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
@@ -47,7 +49,8 @@ public class CutActivity extends BaseActivity {
     private MyHorizontalScrollView hsv;
     private TextView tvDuration;
     private CustomTextView ctvCut;
-
+    private TextView tvStart, tvEnd;
+    private CutView cutView;
 
 
     @Override
@@ -60,6 +63,8 @@ public class CutActivity extends BaseActivity {
         tvDuration = findViewById(R.id.tv_duration);
         ctvCut = findViewById(R.id.ctv_cut);
         cutContainer = findViewById(R.id.ll_cut);
+        tvStart = findViewById(R.id.tv_start);
+        tvEnd = findViewById(R.id.tv_end);
         findViewById(R.id.ctv_next).setOnClickListener(v -> {
             Intent intent = new Intent(CutActivity.this, SettingAudioActivity.class);
             startActivity(intent);
@@ -70,7 +75,7 @@ public class CutActivity extends BaseActivity {
         });
 
 
-        CutView cutView = new CutView(this, ConvertUtils.dp2px(120), list);
+        cutView = new CutView(this, ConvertUtils.dp2px(120), list);
         ctvCut.setOnClickListener(v -> {
             showDialog("裁剪中……");
             Observable.just(true)
@@ -79,7 +84,6 @@ public class CutActivity extends BaseActivity {
                         public Boolean call(Boolean aBoolean) {
                             float[] floats = cutView.getFromAndToPercent();
                             LogUtils.d("floats[0]=" + floats[0] + ",floats[1]=" + floats[1]);
-
 
                             byte[] bytes = readSDFile(base + "/mix.pcm");
                             if (bytes.length * floats[1] > bytes.length) {
@@ -97,6 +101,12 @@ public class CutActivity extends BaseActivity {
                             return true;
                         }
                     })
+                    .doOnNext(new Action1<Boolean>() {
+                        @Override
+                        public void call(Boolean aBoolean) {
+                            calculateVolume();
+                        }
+                    })
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Action1<Boolean>() {
@@ -106,12 +116,15 @@ public class CutActivity extends BaseActivity {
                             if (aBoolean) {
                                 int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
                                 tvDuration.setText(getFormatedLenght(seconds));
-                                calculateVolume();
+                                tvEnd.setText(getFormatedLenght(seconds));
                                 cutContainer.setCutViewLength(cutView.getMaxLength());
                                 cutView.setListVolume(list);
                                 cutView.postInvalidate();
                                 cutView.setScrollX(0);
                                 ToastUtils.showShort("裁剪成功！");
+
+                                list.clear();
+                                init();
                             }
                         }
                     });
@@ -119,64 +132,106 @@ public class CutActivity extends BaseActivity {
 
         int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
         tvDuration.setText(getFormatedLenght(seconds));
-        calculateVolume();
+        tvEnd.setText(getFormatedLenght(seconds));
+
+        init();
 
 
-        hsv = findViewById(R.id.hsv);
-        hsv.measure(0, 0);
-
-        //增加整体布局监听
-        ViewTreeObserver vto = hsv.getViewTreeObserver();
-
-        vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-
-            @Override
-            public void onGlobalLayout() {
-                hsv.getViewTreeObserver().removeGlobalOnLayoutListener(this);
-                cutView.setHsvWidth(hsv.getMeasuredWidth());
-                float[] range = mySeekBar.getCurrentRange();
-                cutView.setRange(range);
-            }
-
-        });
-
-        hsv.setScrollViewListener(new MyHorizontalScrollView.ScrollViewListener() {
-            @Override
-            public void onScrollChanged(MyHorizontalScrollView scrollView, int x, int y, int oldx, int oldy) {
-                float[] range = mySeekBar.getCurrentRange();
-                cutView.setRange(range);
-                cutView.setScrollX(x);
-                LogUtils.d("x=" + x + ",oldx=" + oldx);
-            }
-        });
-
-        mySeekBar = findViewById(R.id.seekbar1);
-        mySeekBar.setOnRangeChangedListener(new MySeekBar.OnRangeChangedListener() {
-            @Override
-            public void onRangeChanged(MySeekBar view, float min, float max, boolean isFromUser) {
-//                ToastUtils.showShort("min=" + min + ",max=" + max);
-                float[] range = mySeekBar.getCurrentRange();
-                cutView.setRange(range);
-            }
-        });
-        mySeekBar.setValue(0, 20);
-        hsv.addView(cutView);
-
-//        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) cutContainer.getCut2().getLayoutParams();
-//        layoutParams.leftMargin = cutView.getMaxLength() - ConvertUtils.dp2px(14);
-//        cutContainer.measure(0, 0);
-//        if (layoutParams.leftMargin > cutContainer.getMeasuredWidth()) {
-//            layoutParams.leftMargin = cutContainer.getMeasuredWidth() - ConvertUtils.dp2px(14);
-//        }
-//        if (layoutParams.leftMargin < ConvertUtils.dp2px(14)) {
-//            layoutParams.leftMargin = ConvertUtils.dp2px(14);
-//        }
-
-//        LogUtils.d("aa" + layoutParams.leftMargin + ",cutView.getMaxLength()=" + cutView.getMaxLength());
-//        cutContainer.getCut2().setLayoutParams(layoutParams);
-        cutContainer.setCutViewLength(cutView.getMaxLength());
 
     }
+
+    private void init(){
+        Observable.just(true)
+                .map(new Func1<Boolean, Boolean>() {
+                    @Override
+                    public Boolean call(Boolean aBoolean) {
+                        calculateVolume();
+                        return null;
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnSubscribe(new Action0() {
+                    @Override
+                    public void call() {
+                        showDialog("请稍等...");
+                    }
+                })
+                .subscribe(new Subscriber<Boolean>() {
+                    @Override
+                    public void onCompleted() {
+                        cutView.setListVolume(list);
+                        cutView.postInvalidate();
+                        cutView.setScrollX(0);
+                        hsv = findViewById(R.id.hsv);
+                        hsv.measure(0, 0);
+
+                        //增加整体布局监听
+                        ViewTreeObserver vto = hsv.getViewTreeObserver();
+                        vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                            @Override
+                            public void onGlobalLayout() {
+                                hsv.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+                                cutView.setHsvWidth(hsv.getMeasuredWidth());
+                                float maxRange1 = (float) cutView.getMaxLength() / hsv.getMeasuredWidth() * 100f;
+                                mySeekBar.setValue(0, maxRange1 > 100 ? 100 : maxRange1);
+                                float[] range = mySeekBar.getCurrentRange();
+                                cutView.setRange(range);
+                            }
+                        });
+
+                        hsv.setScrollViewListener(new MyHorizontalScrollView.ScrollViewListener() {
+                            @Override
+                            public void onScrollChanged(MyHorizontalScrollView scrollView, int x, int y, int oldx, int oldy) {
+                                float[] range = mySeekBar.getCurrentRange();
+                                cutView.setRange(range);
+                                cutView.setScrollX(x);
+                                LogUtils.d("x=" + x + ",oldx=" + oldx);
+                            }
+                        });
+
+                        mySeekBar = findViewById(R.id.seekbar1);
+                        mySeekBar.setOnRangeChangedListener(new MySeekBar.OnRangeChangedListener() {
+                            @Override
+                            public void onRangeChanged(MySeekBar view, float min, float max, boolean isFromUser) {
+                                float[] floats = cutView.getFromAndToPercent();
+
+
+                                float[] range = mySeekBar.getCurrentRange();
+                                if (range[1] / 100f * hsv.getMeasuredWidth() > cutView.getMaxLength()) {
+                                    mySeekBar.setValue(range[0], (float) cutView.getMaxLength() / hsv.getMeasuredWidth() * 100);
+                                    return;
+                                }
+                                range = mySeekBar.getCurrentRange();
+//                                LogUtils.d("min="+min+",max="+max+",range[0]="+range[0]+",range[1]="+range[1]);
+                                cutView.setRange(range);
+                                if (floats[1] == 0) {
+                                    return;
+                                }
+                                byte[] bytes = readSDFile(base + "/mix.pcm");
+                                tvStart.setText(getFormatedLenght((int) ((bytes.length * floats[0]) / 88200)));
+                                tvEnd.setText(getFormatedLenght((int) (bytes.length * floats[1] / 88200)));
+//                                LogUtils.d("(int) (bytes.length * floats[1] / 88200))="+(int) (bytes.length * floats[1] / 88200));
+                            }
+                        });
+                        hsv.removeAllViews();
+                        hsv.addView(cutView);
+                        cutContainer.setCutViewLength(cutView.getMaxLength());
+                        dismissProgressDialog();
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        dismissProgressDialog();
+                    }
+
+                    @Override
+                    public void onNext(Boolean aBoolean) {
+
+                    }
+                });
+    }
+
 
     private String getFormatedLenght(int length) {
         int minutes = length / 60;
@@ -187,7 +242,7 @@ public class CutActivity extends BaseActivity {
     private void calculateVolume() {
         byte[] bytes = readSDFile(base + "/mix.pcm");
         int bufferSize = AudioRecord.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT) * 100;
-        bufferSize = 88200 / 2;
+        bufferSize = 88200 / 4;
         int offset = 0;
         long v = 0;
         byte[] bytesTemp = new byte[bufferSize];

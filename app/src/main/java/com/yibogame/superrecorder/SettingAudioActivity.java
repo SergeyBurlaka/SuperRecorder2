@@ -88,7 +88,7 @@ public class SettingAudioActivity extends BaseActivity {
                         while (isPlaying) {
                             pcmPlayer.write(data, mPlayOffset, mPrimePlaySize);
                             mPlayOffset += mPrimePlaySize;
-                            LogUtils.d("mPlayOffset=" + mPlayOffset + ",data.length =" + data.length + ",mPlayOffset / data.length=" + (mPlayOffset / data.length));
+//                            LogUtils.d("mPlayOffset=" + mPlayOffset + ",data.length =" + data.length + ",mPlayOffset / data.length=" + (mPlayOffset / data.length));
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -250,4 +250,16 @@ public class SettingAudioActivity extends BaseActivity {
     }
 
 
+    private void stop() {
+        if (threadPlay != null && threadPlay.isAlive() && !threadPlay.isInterrupted()) {
+            isPlaying = false;
+            threadPlay.interrupt();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        stop();
+    }
 }
