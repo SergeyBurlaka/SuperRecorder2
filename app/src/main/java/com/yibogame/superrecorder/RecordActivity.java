@@ -156,6 +156,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         tvBgMusicVolume = findViewById(R.id.tv_bg_music_volume);
         mACSBMusicVolume = findViewById(R.id.bg_music_volume);
         mACSBMusicVolume.setProgress((int) (currVolume * 100));
+        //音量滑块滑动
         mACSBMusicVolume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
@@ -202,6 +203,32 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     setPlaying(false);
                     builder.show();
                 });
+        //试听
+        RxView.clicks(findViewById(R.id.ctv_listen))
+                .throttleFirst(500, TimeUnit.MILLISECONDS)
+                .subscribe(o -> {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(RecordActivity.this)
+                            .setTitle("提示")
+                            .setMessage("录音已暂停，你是否确定要去下一步？")
+                            .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+
+                                }
+                            })
+                            .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    Intent intent = new Intent(RecordActivity.this, SettingAudioActivity.class);
+                                    startActivity(intent);
+                                }
+                            });
+                    setRecordStatus(RecordStatus.PAUSE);
+                    setPlaying(false);
+                    builder.show();
+                });
+        //裁剪
         RxView.clicks(findViewById(R.id.ctv_cut))
                 .throttleFirst(500, TimeUnit.MILLISECONDS)
                 .subscribe(o -> {
@@ -236,6 +263,12 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         //重录按钮
         RxView.clicks(findViewById(R.id.ctv_record))
                 .subscribe(o -> {
+                    if (cutView != null) {
+                        cutView.clear();
+                    }
+                    if (tvDuration != null) {
+                        tvDuration.setText(getFormatedLenght(0));
+                    }
                     deleteTempFiles();
                     setRecordStatus(RecordStatus.NONE);
                     setPlaying(false);
@@ -471,9 +504,6 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     }
 
     private void pauseMp3() {
-        if (mediaPlayerStatus == 2) {
-            return;
-        }
         if (myMediaPlayer != null && myMediaPlayer.isPlaying()) {
             myMediaPlayer.pause();
             mediaPlayerStatus = 2;
@@ -565,6 +595,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         pbBg.setProgress(height);
     }
 
+    private int factor = 5, currFactor = 0;
 
     @Override
     public void startVoiceRecord() {
@@ -592,8 +623,12 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            tvDuration.setText(getFormatedLenght((int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200)));
-                            cutView.addVolume(volumeMixed);
+                            currFactor = currFactor % factor;
+                            if (currFactor == 0) {
+                                tvDuration.setText(getFormatedLenght((int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200)));
+                                cutView.addVolume(volumeMixed);
+                            }
+                            currFactor++;
                         }
                     });
                     RecordBgMusicUtil.getInstance().writeAudioDataToFile(base + "/mix.pcm", result, true);

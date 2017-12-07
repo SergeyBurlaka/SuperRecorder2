@@ -134,14 +134,15 @@
         android:orientation="horizontal">
 
         <com.yibogame.superrecorder.CustomTextView
-            android:id="@+id/ctv_cut"
+            android:id="@+id/ctv_next"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/align_bottom"
+            android:layout_marginLeft="@dimen/btns_left_margin"
             android:gravity="center"
-            android:text="裁剪"
+            android:text="取消"
             android:textColor="#ffffff"
-            app:drawableTopCompat="@mipmap/ic_cut"
+            app:drawableTopCompat="@mipmap/ic_save"
             app:drawableTopCompatSize="42dp" />
 
         <com.yibogame.superrecorder.CustomTextView
@@ -155,18 +156,17 @@
             android:textColor="#ffffff"
             app:drawableTopCompat="@mipmap/ic_cut_play"
             app:drawableTopCompatSize="65dp" />
-
         <com.yibogame.superrecorder.CustomTextView
-            android:id="@+id/ctv_next"
+            android:id="@+id/ctv_cut"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/align_bottom"
-            android:layout_marginLeft="@dimen/btns_left_margin"
             android:gravity="center"
-            android:text="下一步"
+            android:text="裁剪"
             android:textColor="#ffffff"
-            app:drawableTopCompat="@mipmap/ic_save"
+            app:drawableTopCompat="@mipmap/ic_cut"
             app:drawableTopCompatSize="42dp" />
+
     </LinearLayout>
 
     <TextView

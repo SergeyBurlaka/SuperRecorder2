@@ -66,8 +66,7 @@ public class CutActivity extends BaseActivity {
         tvStart = findViewById(R.id.tv_start);
         tvEnd = findViewById(R.id.tv_end);
         findViewById(R.id.ctv_next).setOnClickListener(v -> {
-            Intent intent = new Intent(CutActivity.this, SettingAudioActivity.class);
-            startActivity(intent);
+            finish();
         });
         findViewById(R.id.ctv_next1).setOnClickListener(v -> {
             Intent intent = new Intent(CutActivity.this, SettingAudioActivity.class);
@@ -114,17 +113,21 @@ public class CutActivity extends BaseActivity {
                         public void call(Boolean aBoolean) {
                             dismissProgressDialog();
                             if (aBoolean) {
-                                int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
-                                tvDuration.setText(getFormatedLenght(seconds));
-                                tvEnd.setText(getFormatedLenght(seconds));
-                                cutContainer.setCutViewLength(cutView.getMaxLength());
-                                cutView.setListVolume(list);
-                                cutView.postInvalidate();
-                                cutView.setScrollX(0);
                                 ToastUtils.showShort("裁剪成功！");
-
-                                list.clear();
-                                init();
+                                finish();
+//                                int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
+//                                tvDuration.setText(getFormatedLenght(seconds));
+//                                tvEnd.setText(getFormatedLenght(seconds));
+////                                cutContainer.setCutViewLength(cutView.getMaxLength());
+////                                cutView.setListVolume(list);
+////                                cutView.postInvalidate();
+////                                cutView.setScrollX(0);
+//                                ToastUtils.showShort("裁剪成功！");
+//
+//                                list.clear();
+//                                init();
+                            } else {
+                                ToastUtils.showShort("裁剪失败！");
                             }
                         }
                     });
@@ -137,10 +140,9 @@ public class CutActivity extends BaseActivity {
         init();
 
 
-
     }
 
-    private void init(){
+    private void init() {
         Observable.just(true)
                 .map(new Func1<Boolean, Boolean>() {
                     @Override
@@ -279,6 +281,40 @@ public class CutActivity extends BaseActivity {
         return volume;
     }
 
+
+    private double calcDecibelLevel(short[] buffer) {
+        double sum = 0;
+        for (short rawSample : buffer) {
+            double sample = rawSample / 32768.0;
+            sum += sample * sample;
+        }
+        double rms = Math.sqrt(sum / buffer.length);
+        return 20 * Math.log10(rms);
+    }
+
+    /**
+     * Computes the RMS volume of a group of signal sizes ranging from -1 to 1.
+     */
+    public static double volumeRMS(double[] raw) {
+        double sum = 0d;
+        if (raw.length == 0) {
+            return sum;
+        } else {
+            for (int ii = 0; ii < raw.length; ii++) {
+                sum += raw[ii];
+            }
+        }
+        double average = sum / raw.length;
+
+        double sumMeanSquare = 0d;
+        for (int ii = 0; ii < raw.length; ii++) {
+            sumMeanSquare += Math.pow(raw[ii] - average, 2d);
+        }
+        double averageMeanSquare = sumMeanSquare / raw.length;
+        double rootMeanSquare = Math.sqrt(averageMeanSquare);
+
+        return rootMeanSquare;
+    }
 
     public byte[] readSDFile(String fileName) {
         byte[] bytes = new byte[0];

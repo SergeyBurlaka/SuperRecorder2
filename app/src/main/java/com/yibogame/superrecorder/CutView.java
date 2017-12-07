@@ -21,7 +21,7 @@ import java.util.List;
 public class CutView extends View {
 
     private List<Double> listVolume = null;
-    private int max = 70;
+    private int max = 40;
     private int widthPerLine = 5, space = 2;
     private Paint mPaint;
     private int mHeight;
@@ -35,8 +35,17 @@ public class CutView extends View {
     }
 
     public void addVolume(double volume) {
+        if (this.listVolume.size() > 300) {
+            this.listVolume.remove(0);
+        }
         this.listVolume.add(volume);
         requestLayout();
+    }
+
+    public void clear(){
+        this.listVolume.clear();
+        requestLayout();
+        postInvalidate();
     }
 
     public void setRange(float[] range) {
@@ -149,11 +158,11 @@ public class CutView extends View {
             height = height > getMeasuredHeight() ? getMeasuredHeight() : height;
             int offset = i * (widthPerLine + space);
 //            if (start != 0) {
-                if (offset < start || offset > end) {
-                    mPaint.setColor(colorDefault);
-                } else {
-                    mPaint.setColor(colorAccent);
-                }
+            if (offset <= start || offset > end) {
+                mPaint.setColor(colorDefault);
+            } else {
+                mPaint.setColor(colorAccent);
+            }
 //            }
             canvas.drawRect(offset, getMeasuredHeight() - height, offset + widthPerLine, getMeasuredHeight(), mPaint);
         }

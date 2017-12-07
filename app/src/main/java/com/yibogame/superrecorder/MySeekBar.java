@@ -776,8 +776,9 @@ public class MySeekBar extends View {
     public float[] getCurrentRange() {
         float range = maxValue - minValue;
         if (mSeekBarMode == 2) {
-            return new float[]{-offsetValue + minValue + range * leftSB.currPercent,
-                    -offsetValue + minValue + range * rightSB.currPercent};
+            float first = -offsetValue + minValue + range * leftSB.currPercent;
+            float second = -offsetValue + minValue + range * rightSB.currPercent;
+            return new float[]{first, second};
         }else {
             return new float[]{-offsetValue + minValue + range * leftSB.currPercent,
                     -offsetValue + minValue + range * 1.0f};
