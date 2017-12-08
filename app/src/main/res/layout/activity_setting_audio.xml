@@ -87,6 +87,7 @@
             android:background="#2b2d32" />
 
         <com.yibogame.superrecorder.CustomTextView
+            android:id="@+id/ctv_back"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"

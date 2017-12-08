@@ -207,26 +207,11 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         RxView.clicks(findViewById(R.id.ctv_listen))
                 .throttleFirst(500, TimeUnit.MILLISECONDS)
                 .subscribe(o -> {
-                    AlertDialog.Builder builder = new AlertDialog.Builder(RecordActivity.this)
-                            .setTitle("提示")
-                            .setMessage("录音已暂停，你是否确定要去下一步？")
-                            .setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
-
-                                }
-                            })
-                            .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    Intent intent = new Intent(RecordActivity.this, SettingAudioActivity.class);
-                                    startActivity(intent);
-                                }
-                            });
                     setRecordStatus(RecordStatus.PAUSE);
                     setPlaying(false);
-                    builder.show();
+                    Intent intent = new Intent(RecordActivity.this, CutActivity.class);
+                    intent.putExtra("isCut", false);
+                    startActivity(intent);
                 });
         //裁剪
         RxView.clicks(findViewById(R.id.ctv_cut))

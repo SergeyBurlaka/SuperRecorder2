@@ -7,7 +7,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -52,10 +54,15 @@ public class CutActivity extends BaseActivity {
     private TextView tvStart, tvEnd;
     private CutView cutView;
 
+    private boolean isCut = false;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        isCut = getIntent().getBooleanExtra("isCut", false);
+
         setContentView(R.layout.activity_cut);
         View vStatus = findViewById(R.id.v_status);
         vStatus.getLayoutParams().height = BarUtils.getStatusBarHeight();
@@ -116,17 +123,6 @@ public class CutActivity extends BaseActivity {
                             if (aBoolean) {
                                 ToastUtils.showShort("裁剪成功！");
                                 finish();
-//                                int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
-//                                tvDuration.setText(getFormatedLenght(seconds));
-//                                tvEnd.setText(getFormatedLenght(seconds));
-////                                cutContainer.setCutViewLength(cutView.getMaxLength());
-////                                cutView.setListVolume(list);
-////                                cutView.postInvalidate();
-////                                cutView.setScrollX(0);
-//                                ToastUtils.showShort("裁剪成功！");
-//
-//                                list.clear();
-//                                init();
                             } else {
                                 ToastUtils.showShort("裁剪失败！");
                             }
@@ -137,8 +133,18 @@ public class CutActivity extends BaseActivity {
         int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
         tvDuration.setText(getFormatedLenght(seconds));
         tvEnd.setText(getFormatedLenght(seconds));
-
-        init();
+        if (isCut) {
+            init();
+        } else{
+            PlayView playView = new PlayView(this);
+            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            playView.setLayoutParams(layoutParams);
+            hsv.removeAllViews();
+            hsv.addView(playView);
+            calculateVolume();
+            playView.setListVolume(list);
+            //
+        }
 
 
     }

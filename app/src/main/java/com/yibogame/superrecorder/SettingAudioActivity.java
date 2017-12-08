@@ -6,6 +6,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -53,6 +56,7 @@ public class SettingAudioActivity extends BaseActivity {
     private int mPlayOffset, mPrimePlaySize;
     private byte[] data = null;
     private int fileLenght;
+    private ImageView ivDisk;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -65,6 +69,8 @@ public class SettingAudioActivity extends BaseActivity {
         tvLength = findViewById(R.id.tv_length);
         tvCurr = findViewById(R.id.tv_curr);
         pbDuration = findViewById(R.id.pb_duration);
+        ivDisk = findViewById(R.id.iv_disk);
+
 
         data = readSDFile(base + "/mix.pcm");
         try {
@@ -73,6 +79,10 @@ public class SettingAudioActivity extends BaseActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        //重录
+        findViewById(R.id.ctv_back).setOnClickListener(v -> {
+            finish();
+        });
 
 
         pcmPlayer = new PCMPlayer(0, 0, 0);
@@ -98,6 +108,7 @@ public class SettingAudioActivity extends BaseActivity {
                                         isPlaying = false;
                                         ivPlay.setImageResource(R.mipmap.ic_play_status);
                                         mPlayOffset = 0;
+                                        ivDisk.clearAnimation();
                                     }
                                 }
                             });
@@ -105,9 +116,11 @@ public class SettingAudioActivity extends BaseActivity {
                     }
                 });
                 threadPlay.start();
+                startAnim();
             } else {
                 isPlaying = false;
                 ivPlay.setImageResource(R.mipmap.ic_play_status);
+                stopAnim();
 //                threadPlay.interrupt();
             }
         });
@@ -260,6 +273,19 @@ public class SettingAudioActivity extends BaseActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
+        stopAnim();
         stop();
+    }
+
+    private void startAnim() {
+        Animation operatingAnim = AnimationUtils.loadAnimation(this, R.anim.rotate_anim);
+        LinearInterpolator lin = new LinearInterpolator();
+        operatingAnim.setInterpolator(lin);
+        ivDisk.setAnimation(operatingAnim);
+        ivDisk.startAnimation(operatingAnim);
+    }
+
+    private void stopAnim() {
+        ivDisk.clearAnimation();
     }
 }

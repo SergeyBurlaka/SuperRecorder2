@@ -106,6 +106,7 @@ public class CutView extends View {
         initPaint();
     }
 
+
     private void initPaint() {
         mPaint = new Paint();
         mPaint.setColor(colorDefault);

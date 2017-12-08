@@ -28,6 +28,7 @@
         <activity android:name=".SettingAudioActivity" />
         <activity android:name=".CutActivity" />
         <activity android:name=".PCMPlayerActivity" />
+        <activity android:name=".ChoiceBgMusicActivity" />
     </application>
 
 </manifest>
