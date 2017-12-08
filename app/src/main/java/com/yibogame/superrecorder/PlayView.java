@@ -8,6 +8,8 @@ import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.View;
 
+import com.blankj.utilcode.util.LogUtils;
+
 import java.util.List;
 
 /**
@@ -49,6 +51,16 @@ public class PlayView extends View {
 
     public void setListVolume(List<Double> listVolume) {
         this.listVolume = listVolume;
+        invalidate();
+    }
+
+    public float getPlayPercent() {
+        return playPercent;
+    }
+
+    public void setPlayPercent(float playPercent) {
+        this.playPercent = playPercent;
+        invalidate();
     }
 
     private void init() {
@@ -56,9 +68,16 @@ public class PlayView extends View {
         mPaint.setColor(colorDefault);
     }
 
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
         if (listVolume == null || listVolume.size() <= 0) {
             return;
         }
@@ -77,5 +96,6 @@ public class PlayView extends View {
             //画音频线
             canvas.drawRect(offset, getMeasuredHeight() - height, offset + widthPerLine, getMeasuredHeight(), mPaint);
         }
+        canvas.drawColor(colorAccent);
     }
 }

@@ -110,7 +110,6 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
             @SuppressLint("SetTextI18n")
             @Override
             public void onChanged() {
-                LogUtils.d("recordStatus=" + recordStatus + ",isPlaying=" + isPlaying);
                 if (recordStatus == RecordStatus.RECORDING) {
                     RecorderUtil.getInstance().setReallyRecord(true);
                 } else {
@@ -262,11 +261,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         switchButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if (b) {
-                    setPlaying(true);
-                } else {
-                    setPlaying(false);
-                }
+                setPlaying(b);
             }
         });
         tvBgMusicVolume.setText(String.valueOf((int) (currVolume * 100)));

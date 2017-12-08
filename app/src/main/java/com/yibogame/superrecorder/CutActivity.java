@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -19,6 +20,7 @@ import com.blankj.utilcode.util.ConvertUtils;
 import com.blankj.utilcode.util.FileUtils;
 import com.blankj.utilcode.util.LogUtils;
 import com.blankj.utilcode.util.ToastUtils;
+import com.jakewharton.rxbinding2.view.RxView;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -27,7 +29,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import io.reactivex.functions.Function;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
@@ -56,6 +60,12 @@ public class CutActivity extends BaseActivity {
 
     private boolean isCut = false;
 
+    private PCMPlayer pcmPlayer;
+    private int mPlayOffset, mPrimePlaySize;
+    private boolean isPlaying = false;
+    private Thread threadPlay;
+    private byte[] data = null;
+    private int fileLength;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -67,6 +77,7 @@ public class CutActivity extends BaseActivity {
         View vStatus = findViewById(R.id.v_status);
         vStatus.getLayoutParams().height = BarUtils.getStatusBarHeight();
 
+        hsv = findViewById(R.id.hsv);
         tvDuration = findViewById(R.id.tv_duration);
         ctvCut = findViewById(R.id.ctv_cut);
         cutContainer = findViewById(R.id.ll_cut);
@@ -74,10 +85,6 @@ public class CutActivity extends BaseActivity {
         tvEnd = findViewById(R.id.tv_end);
         findViewById(R.id.ctv_next).setOnClickListener(v -> {
             finish();
-        });
-        findViewById(R.id.ctv_next1).setOnClickListener(v -> {
-            Intent intent = new Intent(CutActivity.this, SettingAudioActivity.class);
-            startActivity(intent);
         });
 
 
@@ -135,15 +142,57 @@ public class CutActivity extends BaseActivity {
         tvEnd.setText(getFormatedLenght(seconds));
         if (isCut) {
             init();
-        } else{
+        } else {
+            findViewById(R.id.seekbar1).setVisibility(View.GONE);
             PlayView playView = new PlayView(this);
-            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(100, 100);
             playView.setLayoutParams(layoutParams);
             hsv.removeAllViews();
             hsv.addView(playView);
             calculateVolume();
             playView.setListVolume(list);
             //
+            fileLength = getLength(base + "/mix.pcm");
+            pcmPlayer = new PCMPlayer(0, 0, 0);
+            mPrimePlaySize = pcmPlayer.getBufferSize() * 2;
+            CustomTextView ctvPlay = findViewById(R.id.ctv_play);
+            RxView.clicks(ctvPlay)
+                    .map(o -> ctvPlay)
+                    .throttleFirst(300, TimeUnit.MILLISECONDS)
+                    .subscribe(o -> {
+                        if (!isPlaying) {
+                            isPlaying = true;
+                            o.setText("暂停");
+                            o.setDrawableTop(R.mipmap.ic_cut_pause);
+                            threadPlay = new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    data = readSDFile(base + "/mix.pcm");
+                                    while (isPlaying) {
+                                        pcmPlayer.write(data, mPlayOffset, mPrimePlaySize);
+                                        runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                float percent = mPlayOffset / (float) data.length;
+                                                playView.setPlayPercent(percent);
+                                                if (mPlayOffset >= data.length) {
+                                                    isPlaying = false;
+                                                    o.setDrawableTop(R.mipmap.ic_cut_play);
+                                                    mPlayOffset = 0;
+                                                }
+                                            }
+                                        });
+                                        mPlayOffset += mPrimePlaySize;
+                                    }
+                                }
+                            });
+                            threadPlay.start();
+                        } else {
+                            isPlaying = false;
+                            o.setText("试听");
+                            o.setDrawableTop(R.mipmap.ic_cut_play);
+                        }
+                    });
         }
 
 
@@ -172,7 +221,7 @@ public class CutActivity extends BaseActivity {
                         cutView.setListVolume(list);
                         cutView.postInvalidate();
                         cutView.setScrollX(0);
-                        hsv = findViewById(R.id.hsv);
+
                         hsv.measure(0, 0);
 
                         //增加整体布局监听
@@ -325,17 +374,13 @@ public class CutActivity extends BaseActivity {
 
     public byte[] readSDFile(String fileName) {
         byte[] bytes = new byte[0];
-        try {
-            int fileLength = (int) getFileLength(fileName);
-            if (fileLength == -1) {
-                finish();
-                ToastUtils.showShort("暂无录音文件！");
-                return new byte[0];
-            }
-            bytes = new byte[fileLength];
-        } catch (IOException e) {
-            e.printStackTrace();
+        int fileLength = (int) getFileLength(fileName);
+        if (fileLength == -1) {
+            finish();
+            ToastUtils.showShort("暂无录音文件！");
+            return new byte[0];
         }
+        bytes = new byte[fileLength];
         try {
             FileInputStream inputStream = new FileInputStream(fileName);
             try {
@@ -349,7 +394,7 @@ public class CutActivity extends BaseActivity {
         return bytes;
     }
 
-    public long getFileLength(String fileName) throws IOException {
+    public long getFileLength(String fileName) {
         return FileUtils.getFileLength(fileName);
     }
 
@@ -383,4 +428,22 @@ public class CutActivity extends BaseActivity {
         }
     }
 
+    private int getLength(String fileName) {
+        int length = 0;
+        length = (int) (FileUtils.getFileLength(fileName) / 88200);
+        return length;
+    }
+
+    private void stop() {
+        if (threadPlay != null && threadPlay.isAlive() && !threadPlay.isInterrupted()) {
+            isPlaying = false;
+            threadPlay.interrupt();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        stop();
+    }
 }
