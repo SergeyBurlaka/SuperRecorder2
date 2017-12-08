@@ -89,14 +89,15 @@ public class CutActivity extends BaseActivity {
                                 ToastUtils.showShort("长度超出，请调整裁剪滑块的位置。");
                                 return false;
                             }
-                            byte[] bytesStart = new byte[(int) (bytes.length * floats[0])];
-                            byte[] bytesEnd = new byte[(int) (bytes.length - bytes.length * floats[1])];
-                            System.arraycopy(bytes, 0, bytesStart, 0, bytesStart.length);
-                            System.arraycopy(bytes, (int) (bytes.length * floats[1]), bytesEnd, 0, bytesEnd.length);
+                            short[] shorts = ConvertUtil.getInstance().toShortArray(bytes);
+                            short[] shortStart = new short[(int) (shorts.length * floats[0])];
+                            short[] shortEnd = new short[(int) (shorts.length - shorts.length * floats[1])];
+                            System.arraycopy(shorts, 0, shortStart, 0, shortStart.length);
+                            System.arraycopy(shorts, shortStart.length, shortEnd, 0, shortEnd.length);
 
                             FileUtils.deleteFile(new File(base + "/mix.pcm"));
-                            writeAudioDataToFile(base + "/mix.pcm", bytesStart, true);
-                            writeAudioDataToFile(base + "/mix.pcm", bytesEnd, true);
+                            writeAudioDataToFile(base + "/mix.pcm", ConvertUtil.getInstance().toByteArray(shortStart), true);
+                            writeAudioDataToFile(base + "/mix.pcm", ConvertUtil.getInstance().toByteArray(shortEnd), true);
                             return true;
                         }
                     })

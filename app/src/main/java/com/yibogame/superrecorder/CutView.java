@@ -28,7 +28,7 @@ public class CutView extends View {
     private float[] range;
     private int scrollX;
 
-    private int start, end, hsvWidth;
+    private int startWidthInPixel, endWidthInPixel, hsvWidth;
 
     public void setListVolume(List<Double> listVolume) {
         this.listVolume = listVolume;
@@ -49,24 +49,24 @@ public class CutView extends View {
     }
 
     public void setRange(float[] range) {
-        start = (int) ((range[0] / 100f * hsvWidth) + scrollX);
-        end = (int) (range[1] / 100f * hsvWidth + scrollX);
+        startWidthInPixel = (int) ((range[0] / 100f * hsvWidth) + scrollX);
+        endWidthInPixel = (int) (range[1] / 100f * hsvWidth + scrollX);
         postInvalidate();
         this.range = range;
     }
 
     public float[] getFromAndToPercent() {
         float[] floats = new float[2];
-        floats[0] = (float) start / getMeasuredWidth();
-        floats[1] = (float) end / getMeasuredWidth();
+        floats[0] = (float) startWidthInPixel / getMeasuredWidth();
+        floats[1] = (float) endWidthInPixel / getMeasuredWidth();
         return floats;
     }
 
     @Override
     public void setScrollX(int scrollX) {
         if (range != null) {
-            start = (int) ((range[0] / 100f * hsvWidth) + scrollX);
-            end = (int) (range[1] / 100f * hsvWidth + scrollX);
+            startWidthInPixel = (int) ((range[0] / 100f * hsvWidth) + scrollX);
+            endWidthInPixel = (int) (range[1] / 100f * hsvWidth + scrollX);
             postInvalidate();
         }
         this.scrollX = scrollX;
@@ -157,8 +157,8 @@ public class CutView extends View {
             int height = (int) (listVolume.get(i) / max * getMeasuredHeight());
             height = height > getMeasuredHeight() ? getMeasuredHeight() : height;
             int offset = i * (widthPerLine + space);
-//            if (start != 0) {
-            if (offset <= start || offset > end) {
+//            if (startWidthInPixel != 0) {
+            if (offset <= startWidthInPixel || offset > endWidthInPixel) {
                 mPaint.setColor(colorDefault);
             } else {
                 mPaint.setColor(colorAccent);
