@@ -223,6 +223,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     setRecordStatus(RecordStatus.PAUSE);
                     setPlaying(false);
                     Intent intent = new Intent(RecordActivity.this, CutActivity.class);
+                    intent.putExtra("isCut", true);
                     startActivity(intent);
                 });
         ctvRecordPause = findViewById(R.id.ctv_record_pause);

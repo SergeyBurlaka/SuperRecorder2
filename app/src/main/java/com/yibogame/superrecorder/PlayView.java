@@ -24,7 +24,7 @@ public class PlayView extends View {
     private Paint mPaint;
     private float playPercent;
 
-    private static final int lineWidth = 4;
+    private static final int lineWidth = 5;
 
     private int colorAccent = Color.parseColor("#c10e41");
     private int colorDefault = Color.parseColor("#b7bbc6");
@@ -60,6 +60,13 @@ public class PlayView extends View {
 
     public void setPlayPercent(float playPercent) {
         this.playPercent = playPercent;
+        if (playPercent * (widthPerLine + space) * listVolume.size() >= getMeasuredWidth()) {
+//            this.setLeft((widthPerLine + space) * listVolume.size() * -1);
+            this.layout((int) (playPercent * (widthPerLine + space) * listVolume.size() - getMeasuredWidth() + 100) * -1, getTop(), getRight(), getBottom());
+        }
+        if (playPercent <= 0) {
+            this.setLeft(0);
+        }
         invalidate();
     }
 
@@ -72,12 +79,40 @@ public class PlayView extends View {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        int width = getMySize(200, widthMeasureSpec);
+        int height = getMySize(0, heightMeasureSpec);
+
+
+        setMeasuredDimension(width, height);
+    }
+
+    private int getMySize(int defaultSize, int measureSpec) {
+        int mySize = defaultSize;
+
+        int mode = MeasureSpec.getMode(measureSpec);
+        int size = MeasureSpec.getSize(measureSpec);
+
+        switch (mode) {
+            case MeasureSpec.UNSPECIFIED: {//如果没有指定大小，就设置为默认大小
+                mySize = defaultSize;
+                break;
+            }
+            case MeasureSpec.AT_MOST: {//如果测量模式是最大取值为size
+                //我们将大小取最大值,你也可以取其他值
+                mySize = size;
+                break;
+            }
+            case MeasureSpec.EXACTLY: {//如果是固定的大小，那就不要去改变它
+                mySize = size;
+                break;
+            }
+        }
+        return mySize;
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
         if (listVolume == null || listVolume.size() <= 0) {
             return;
         }
@@ -87,15 +122,14 @@ public class PlayView extends View {
             int offset = i * (widthPerLine + space);
             //画时间线
             mPaint.setColor(colorCursorLine);
-            canvas.drawRect(playPercent * getMeasuredWidth(), 0, offset + lineWidth, getMeasuredHeight(), mPaint);
-            if (offset < playPercent * getMeasuredWidth()) {
-                mPaint.setColor(colorDefault);
-            } else {
+            canvas.drawRect(playPercent * (widthPerLine + space) * listVolume.size(), 0, playPercent * (widthPerLine + space) * listVolume.size() + lineWidth, getMeasuredHeight(), mPaint);
+            if (offset < playPercent * (widthPerLine + space) * listVolume.size()) {
                 mPaint.setColor(colorAccent);
+            } else {
+                mPaint.setColor(colorDefault);
             }
             //画音频线
             canvas.drawRect(offset, getMeasuredHeight() - height, offset + widthPerLine, getMeasuredHeight(), mPaint);
         }
-        canvas.drawColor(colorAccent);
     }
 }

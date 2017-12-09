@@ -6,13 +6,11 @@ import android.media.AudioRecord;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
-import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.blankj.utilcode.util.BarUtils;
@@ -31,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import io.reactivex.functions.Function;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
@@ -67,6 +64,11 @@ public class CutActivity extends BaseActivity {
     private byte[] data = null;
     private int fileLength;
 
+    private TextView tvTip;
+    private CustomTextView ctvFirst;
+    private TextView tvTopTitle;
+    private CustomTextView ctvPlay;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -83,12 +85,41 @@ public class CutActivity extends BaseActivity {
         cutContainer = findViewById(R.id.ll_cut);
         tvStart = findViewById(R.id.tv_start);
         tvEnd = findViewById(R.id.tv_end);
-        findViewById(R.id.ctv_next).setOnClickListener(v -> {
-            finish();
-        });
-
+        tvTip = findViewById(R.id.tv_tip);
+        ctvFirst = findViewById(R.id.ctv_next);
+        tvTopTitle = findViewById(R.id.tv_top_title);
+        mySeekBar = findViewById(R.id.seekbar1);
+        ctvPlay = findViewById(R.id.ctv_play);
 
         cutView = new CutView(this, ConvertUtils.dp2px(120), list);
+
+
+        int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
+//        tvDuration.setText(getFormatedLenght(seconds));
+        tvEnd.setText(getFormatedLenght(seconds));
+        setUI();
+
+
+    }
+
+    private void setUI() {
+        if (isCut) {
+            initCut();
+        } else {
+            initListen();
+        }
+    }
+
+
+    private void initCut() {
+        tvTopTitle.setText("裁剪");
+        ctvFirst.setText("取消");
+        ctvFirst.setDrawableTop(R.mipmap.ic_save);
+        ctvFirst.setOnClickListener(v -> {
+            finish();
+        });
+        ctvCut.setText("裁剪");
+        ctvCut.setDrawableTop(R.mipmap.ic_cut);
         ctvCut.setOnClickListener(v -> {
             showDialog("裁剪中……");
             Observable.just(true)
@@ -136,69 +167,7 @@ public class CutActivity extends BaseActivity {
                         }
                     });
         });
-
-        int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
-        tvDuration.setText(getFormatedLenght(seconds));
-        tvEnd.setText(getFormatedLenght(seconds));
-        if (isCut) {
-            init();
-        } else {
-            findViewById(R.id.seekbar1).setVisibility(View.GONE);
-            PlayView playView = new PlayView(this);
-            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(100, 100);
-            playView.setLayoutParams(layoutParams);
-            hsv.removeAllViews();
-            hsv.addView(playView);
-            calculateVolume();
-            playView.setListVolume(list);
-            //
-            fileLength = getLength(base + "/mix.pcm");
-            pcmPlayer = new PCMPlayer(0, 0, 0);
-            mPrimePlaySize = pcmPlayer.getBufferSize() * 2;
-            CustomTextView ctvPlay = findViewById(R.id.ctv_play);
-            RxView.clicks(ctvPlay)
-                    .map(o -> ctvPlay)
-                    .throttleFirst(300, TimeUnit.MILLISECONDS)
-                    .subscribe(o -> {
-                        if (!isPlaying) {
-                            isPlaying = true;
-                            o.setText("暂停");
-                            o.setDrawableTop(R.mipmap.ic_cut_pause);
-                            threadPlay = new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    data = readSDFile(base + "/mix.pcm");
-                                    while (isPlaying) {
-                                        pcmPlayer.write(data, mPlayOffset, mPrimePlaySize);
-                                        runOnUiThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                float percent = mPlayOffset / (float) data.length;
-                                                playView.setPlayPercent(percent);
-                                                if (mPlayOffset >= data.length) {
-                                                    isPlaying = false;
-                                                    o.setDrawableTop(R.mipmap.ic_cut_play);
-                                                    mPlayOffset = 0;
-                                                }
-                                            }
-                                        });
-                                        mPlayOffset += mPrimePlaySize;
-                                    }
-                                }
-                            });
-                            threadPlay.start();
-                        } else {
-                            isPlaying = false;
-                            o.setText("试听");
-                            o.setDrawableTop(R.mipmap.ic_cut_play);
-                        }
-                    });
-        }
-
-
-    }
-
-    private void init() {
+        tvTip.setVisibility(View.VISIBLE);
         Observable.just(true)
                 .map(new Func1<Boolean, Boolean>() {
                     @Override
@@ -222,6 +191,7 @@ public class CutActivity extends BaseActivity {
                         cutView.postInvalidate();
                         cutView.setScrollX(0);
 
+
                         hsv.measure(0, 0);
 
                         //增加整体布局监听
@@ -235,6 +205,10 @@ public class CutActivity extends BaseActivity {
                                 mySeekBar.setValue(0, maxRange1 > 100 ? 100 : maxRange1);
                                 float[] range = mySeekBar.getCurrentRange();
                                 cutView.setRange(range);
+                                tvStart.setText(getFormatedLenght(0));
+                                tvEnd.setText(getFormatedLenght((int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200)));
+                                int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
+                                tvDuration.setText(getFormatedLenght(seconds));
                             }
                         });
 
@@ -248,34 +222,47 @@ public class CutActivity extends BaseActivity {
                             }
                         });
 
-                        mySeekBar = findViewById(R.id.seekbar1);
                         mySeekBar.setOnRangeChangedListener(new MySeekBar.OnRangeChangedListener() {
                             @Override
                             public void onRangeChanged(MySeekBar view, float min, float max, boolean isFromUser) {
                                 float[] floats = cutView.getFromAndToPercent();
-
-
                                 float[] range = mySeekBar.getCurrentRange();
+                                byte[] bytes = readSDFile(base + "/mix.pcm");
+                                if (cutView.getMaxLength() == 0 || range[1] == 0 || hsv.getMeasuredWidth() == 0) {
+                                    return;
+                                }
                                 if (range[1] / 100f * hsv.getMeasuredWidth() > cutView.getMaxLength()) {
                                     mySeekBar.setValue(range[0], (float) cutView.getMaxLength() / hsv.getMeasuredWidth() * 100);
                                     return;
                                 }
                                 range = mySeekBar.getCurrentRange();
-//                                LogUtils.d("min="+min+",max="+max+",range[0]="+range[0]+",range[1]="+range[1]);
                                 cutView.setRange(range);
                                 if (floats[1] == 0) {
                                     return;
                                 }
-                                byte[] bytes = readSDFile(base + "/mix.pcm");
                                 tvStart.setText(getFormatedLenght((int) ((bytes.length * floats[0]) / 88200)));
                                 tvEnd.setText(getFormatedLenght((int) (bytes.length * floats[1] / 88200)));
-//                                LogUtils.d("(int) (bytes.length * floats[1] / 88200))="+(int) (bytes.length * floats[1] / 88200));
                             }
                         });
                         hsv.removeAllViews();
                         hsv.addView(cutView);
                         cutContainer.setCutViewLength(cutView.getMaxLength());
+                        for (int i = 0; i < cutContainer.getChildCount(); i++) {
+                            if (cutContainer.getChildAt(i) instanceof PlayView) {
+                                cutContainer.getChildAt(i).setVisibility(View.GONE);
+                            } else {
+                                cutContainer.getChildAt(i).setVisibility(View.VISIBLE);
+                            }
+                        }
                         dismissProgressDialog();
+
+                        RxView.clicks(ctvPlay)
+                                .map(o -> ctvPlay)
+                                .throttleFirst(300, TimeUnit.MILLISECONDS)
+                                .subscribe(o -> {
+                                    isCut = false;
+                                    setUI();
+                                });
                     }
 
                     @Override
@@ -290,6 +277,90 @@ public class CutActivity extends BaseActivity {
                 });
     }
 
+    private float playPercent;
+
+    private void initListen() {
+
+        tvTopTitle.setText("试听");
+        ctvFirst.setText("裁剪");
+        ctvFirst.setDrawableTop(R.mipmap.ic_cut);
+        ctvFirst.setOnClickListener(v -> {
+            stop();
+            this.isCut = true;
+            setUI();
+        });
+        ctvCut.setText("下一步");
+        ctvCut.setDrawableTop(R.mipmap.ic_save);
+        ctvCut.setOnClickListener(v -> {
+            stop();
+            ctvPlay.setText("试听");
+            ctvPlay.setDrawableTop(R.mipmap.ic_cut_play);
+            Intent intent = new Intent(CutActivity.this, SettingAudioActivity.class);
+            startActivity(intent);
+        });
+        tvTip.setVisibility(View.INVISIBLE);
+        findViewById(R.id.seekbar1).setVisibility(View.GONE);
+        PlayView playView = new PlayView(this);
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        playView.setLayoutParams(layoutParams);
+//        cutContainer.removeAllViews();
+        for (int i = 0; i < cutContainer.getChildCount(); i++) {
+            cutContainer.getChildAt(i).setVisibility(View.GONE);
+        }
+        playView.setVisibility(View.VISIBLE);
+        cutContainer.addView(playView);
+        calculateVolume();
+        playView.setListVolume(list);
+        //
+        fileLength = getLength(base + "/mix.pcm");
+        pcmPlayer = new PCMPlayer(0, 0, 0);
+        mPrimePlaySize = pcmPlayer.getBufferSize() * 2;
+        tvStart.setText(getFormatedLenght(0));
+        tvEnd.setText(getFormatedLenght((int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f)));
+        int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
+        playPercent = 0;
+        mPlayOffset = 0;
+        tvDuration.setText(getFormatedLenght((int) (seconds * playPercent)));
+        RxView.clicks(ctvPlay)
+                .map(o -> ctvPlay)
+                .throttleFirst(300, TimeUnit.MILLISECONDS)
+                .subscribe(o -> {
+                    if (!isPlaying) {
+                        isPlaying = true;
+                        o.setText("暂停");
+                        o.setDrawableTop(R.mipmap.ic_cut_pause);
+                        threadPlay = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                data = readSDFile(base + "/mix.pcm");
+                                while (isPlaying) {
+                                    pcmPlayer.write(data, mPlayOffset, mPrimePlaySize);
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            playPercent = mPlayOffset / (float) data.length;
+                                            playView.setPlayPercent(playPercent);
+                                            tvDuration.setText(getFormatedLenght((int) (seconds * playView.getPlayPercent())));
+                                            if (mPlayOffset >= data.length) {
+                                                isPlaying = false;
+                                                o.setDrawableTop(R.mipmap.ic_cut_play);
+                                                mPlayOffset = 0;
+                                            }
+                                        }
+                                    });
+                                    mPlayOffset += mPrimePlaySize;
+                                }
+                            }
+                        });
+                        threadPlay.start();
+                    } else {
+                        isPlaying = false;
+                        o.setText("试听");
+                        o.setDrawableTop(R.mipmap.ic_cut_play);
+                    }
+                });
+    }
+
 
     private String getFormatedLenght(int length) {
         int minutes = length / 60;
@@ -298,6 +369,7 @@ public class CutActivity extends BaseActivity {
     }
 
     private void calculateVolume() {
+        list.clear();
         byte[] bytes = readSDFile(base + "/mix.pcm");
         int bufferSize = AudioRecord.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT) * 100;
         bufferSize = 88200 / 4;
@@ -438,6 +510,8 @@ public class CutActivity extends BaseActivity {
         if (threadPlay != null && threadPlay.isAlive() && !threadPlay.isInterrupted()) {
             isPlaying = false;
             threadPlay.interrupt();
+            ctvPlay.setText("试听");
+            ctvPlay.setDrawableTop(R.mipmap.ic_cut_play);
         }
     }
 
