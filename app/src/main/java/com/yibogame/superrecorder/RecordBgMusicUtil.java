@@ -68,7 +68,11 @@ public class RecordBgMusicUtil {
         try {
             FileInputStream inputStream = new FileInputStream(fileName);
             arrayOutputStream = new ByteArrayOutputStream();
-            long actualSkiped = inputStream.skip(FileUtils.getFileLength(fileName) == 0 ? offset : offset % FileUtils.getFileLength(fileName));
+            long needSkip = FileUtils.getFileLength(fileName) == 0 ? offset : offset % FileUtils.getFileLength(fileName);
+            if (needSkip < 0) {
+                needSkip = 0;
+            }
+            long actualSkiped = inputStream.skip(needSkip);
 //            LogUtils.d("offset=" + offset);
 //            if (actualSkiped == -1 || actualSkiped < offset % FileUtils.getFileLength(fileName)) {
 //                if (inputStream.markSupported()) {

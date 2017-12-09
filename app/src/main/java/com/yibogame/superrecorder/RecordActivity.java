@@ -2,9 +2,9 @@ package com.yibogame.superrecorder;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Typeface;
 import android.media.AudioManager;
@@ -17,7 +17,6 @@ import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.AppCompatSeekBar;
-import android.view.KeyEvent;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.ProgressBar;
@@ -41,7 +40,6 @@ import java.util.concurrent.TimeUnit;
 import cn.gavinliu.android.ffmpeg.box.FFmpegBox;
 import rx.Observable;
 import rx.Subscriber;
-import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action0;
 import rx.functions.Func1;
@@ -75,8 +73,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
     private CutView cutView;
 
-
-    private Thread threadAddBlankVoice, threadAddBlankBg;
+    private long playedStartMills;
 
     private void setPlaying(boolean playing) {
         if (this.isPlaying == playing) {
@@ -100,10 +97,17 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     }
 
     private OnDataChanged onDataChanged;
+    private HeadsetReceiver mHeadsetPlugUnplugBroadcastReceiver;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mHeadsetPlugUnplugBroadcastReceiver = new HeadsetReceiver();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(Intent.ACTION_HEADSET_PLUG);
+        intentFilter.addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+        registerReceiver(mHeadsetPlugUnplugBroadcastReceiver, intentFilter);
         setContentView(R.layout.activity_record);
 
         onDataChanged = new OnDataChanged() {
@@ -450,6 +454,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                                     myMediaPlayer.setLooping(true);
                                     myMediaPlayer.prepare();
                                     myMediaPlayer.start();
+                                    playedStartMills = System.currentTimeMillis();
                                     myMediaPlayer.setVolume(currVolume, currVolume);
                                     mediaPlayerStatus = 1;
                                     visualizer.setEnabled(true);
@@ -576,12 +581,22 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     }
 
     private int factor = 5, currFactor = 0;
+    private long playedOffsetMills;
 
     @Override
     public void startVoiceRecord() {
         RecorderUtil.getInstance().startRecording(MediaRecorder.AudioSource.MIC, base + Config.tempMicFileName, true, new RecorderUtil.OnVolumeChangeListener() {
             @Override
             public void onVolumeChanged(int readSize, double volume) {
+//                if (playedOffsetMills == 0) {
+//                    playedOffsetMills = System.currentTimeMillis() - playedStartMills;
+////                    LogUtils.e("playedOffsetMills="+playedOffsetMills);
+//                    if (myMediaPlayer != null && myMediaPlayer.isPlaying()) {
+////                        long playedOffsetMills = myMediaPlayer.getCurrentPosition();
+//                        byte[] bytes = new byte[(int) ((playedOffsetMills / 1000f) * 88200) - readSize];
+//                        RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempMicFileName, new byte[ConvertUtil.getInstance().toShortArray(bytes).length * 2], -1, true);
+//                    }
+//                }
 //                LogUtils.d("RecorderUtil.getInstance().isReallyRecord()=" + RecorderUtil.getInstance().isReallyRecord());
                 if (RecorderUtil.getInstance().isReallyRecord()) {
                     pbMic.setProgress((int) volume);
@@ -595,9 +610,15 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     RecordBgMusicUtil.getInstance().appendMusic(base + "/bg_music_1.pcm", base + Config.tempBgFileName, FileUtils.getFileLength(base + Config.tempBgFileName), readSize, currVolume, true);
                 }
                 try {
-                    byte[] bytesBg = RecordBgMusicUtil.getInstance().readSDFile(base + Config.tempBgFileName, FileUtils.getFileLength(base + Config.tempBgFileName) - readSize, readSize, -1);
+                    int bgVolume = -1;
+                    if (!Config.isHeadsetIn && RecorderUtil.getInstance().isReallyRecord()) {
+                        bgVolume = 0;
+                    }
+                    byte[] bytesBg = RecordBgMusicUtil.getInstance().readSDFile(base + Config.tempBgFileName, FileUtils.getFileLength(base + Config.tempBgFileName) - readSize, readSize, bgVolume);
                     byte[] bytesMic = RecordBgMusicUtil.getInstance().readSDFile(base + Config.tempMicFileName, FileUtils.getFileLength(base + Config.tempMicFileName) - readSize, readSize, -1);
                     byte[][] bytes = new byte[][]{bytesBg, bytesMic};
+
+
                     byte[] result = MixUtil.getInstance().averageMix(bytes);
                     double volumeMixed = CutActivity.calculateVolume(result);
                     runOnUiThread(new Runnable() {
@@ -665,6 +686,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
         deleteTempFiles();
         setPlaying(false);
         setRecordStatus(RecordStatus.NONE);
+        unregisterReceiver(mHeadsetPlugUnplugBroadcastReceiver);
     }
 
 }
