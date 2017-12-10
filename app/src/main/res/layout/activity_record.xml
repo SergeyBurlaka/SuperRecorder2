@@ -21,6 +21,7 @@
         android:paddingRight="8dp">
 
         <ImageView
+            android:id="@+id/iv_back"
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:src="@mipmap/ic_back" />
@@ -62,7 +63,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="6dp"
-            android:text="00:52"
+            android:text="00:00"
             android:textColor="#bbb4c2"
             android:textSize="14sp" />
 

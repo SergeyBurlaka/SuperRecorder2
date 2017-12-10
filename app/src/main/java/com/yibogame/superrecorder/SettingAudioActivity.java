@@ -79,8 +79,15 @@ public class SettingAudioActivity extends BaseActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        //返回按钮
+        findViewById(R.id.iv_back).setOnClickListener(v -> {
+            onBackPressed();
+        });
         //重录
         findViewById(R.id.ctv_back).setOnClickListener(v -> {
+            stopAnim();
+            stop();
+            setResult(3);
             finish();
         });
 
@@ -170,26 +177,6 @@ public class SettingAudioActivity extends BaseActivity {
         pbDuration.setMax(getLength());
     }
 
-    private void test() {
-        currPosition++;
-        if (currPosition == getLength()) {
-            currPosition = 0;
-            isPlaying = false;
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    ivPlay.setImageResource(R.mipmap.ic_play_status);
-                }
-            });
-        }
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                tvCurr.setText(getFormatedLenght(currPosition));
-                pbDuration.setProgress(currPosition);
-            }
-        });
-    }
 
     private int getLength() {
         int length = 0;

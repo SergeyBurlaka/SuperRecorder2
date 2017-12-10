@@ -7,6 +7,8 @@ import android.graphics.Paint;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.RelativeLayout;
 
 import com.blankj.utilcode.util.LogUtils;
 
@@ -58,16 +60,21 @@ public class PlayView extends View {
         return playPercent;
     }
 
+
     public void setPlayPercent(float playPercent) {
+        int offset = (int) (playPercent * (widthPerLine + space) * listVolume.size());
+        int x = offset / getMeasuredWidth();
         this.playPercent = playPercent;
-        if (playPercent * (widthPerLine + space) * listVolume.size() >= getMeasuredWidth()) {
-//            this.setLeft((widthPerLine + space) * listVolume.size() * -1);
-            this.layout((int) (playPercent * (widthPerLine + space) * listVolume.size() - getMeasuredWidth() + 100) * -1, getTop(), getRight(), getBottom());
+        if (x >= 1) {
+            int left = x * getMeasuredWidth() * -1;
+            LogUtils.d("left = " + left);
+            ((RelativeLayout.LayoutParams) this.getLayoutParams()).leftMargin = left;
         }
         if (playPercent <= 0) {
-            this.setLeft(0);
+            ((RelativeLayout.LayoutParams) this.getLayoutParams()).leftMargin = 0;
         }
         invalidate();
+        requestLayout();
     }
 
     private void init() {

@@ -99,6 +99,10 @@ public class CutActivity extends BaseActivity {
         tvEnd.setText(getFormatedLenght(seconds));
         setUI();
 
+        findViewById(R.id.iv_back).setOnClickListener(v -> {
+            onBackPressed();
+        });
+
 
     }
 
@@ -278,87 +282,130 @@ public class CutActivity extends BaseActivity {
     }
 
     private float playPercent;
-
+    PlayView playView;
     private void initListen() {
 
-        tvTopTitle.setText("试听");
-        ctvFirst.setText("裁剪");
-        ctvFirst.setDrawableTop(R.mipmap.ic_cut);
-        ctvFirst.setOnClickListener(v -> {
-            stop();
-            this.isCut = true;
-            setUI();
-        });
-        ctvCut.setText("下一步");
-        ctvCut.setDrawableTop(R.mipmap.ic_save);
-        ctvCut.setOnClickListener(v -> {
-            stop();
-            ctvPlay.setText("试听");
-            ctvPlay.setDrawableTop(R.mipmap.ic_cut_play);
-            Intent intent = new Intent(CutActivity.this, SettingAudioActivity.class);
-            startActivity(intent);
-        });
-        tvTip.setVisibility(View.INVISIBLE);
-        findViewById(R.id.seekbar1).setVisibility(View.GONE);
-        PlayView playView = new PlayView(this);
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        playView.setLayoutParams(layoutParams);
-//        cutContainer.removeAllViews();
-        for (int i = 0; i < cutContainer.getChildCount(); i++) {
-            cutContainer.getChildAt(i).setVisibility(View.GONE);
-        }
-        playView.setVisibility(View.VISIBLE);
-        cutContainer.addView(playView);
-        calculateVolume();
-        playView.setListVolume(list);
-        //
-        fileLength = getLength(base + "/mix.pcm");
-        pcmPlayer = new PCMPlayer(0, 0, 0);
-        mPrimePlaySize = pcmPlayer.getBufferSize() * 2;
-        tvStart.setText(getFormatedLenght(0));
-        tvEnd.setText(getFormatedLenght((int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f)));
-        int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
-        playPercent = 0;
-        mPlayOffset = 0;
-        tvDuration.setText(getFormatedLenght((int) (seconds * playPercent)));
-        RxView.clicks(ctvPlay)
-                .map(o -> ctvPlay)
-                .throttleFirst(300, TimeUnit.MILLISECONDS)
-                .subscribe(o -> {
-                    if (!isPlaying) {
-                        isPlaying = true;
-                        o.setText("暂停");
-                        o.setDrawableTop(R.mipmap.ic_cut_pause);
-                        threadPlay = new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                data = readSDFile(base + "/mix.pcm");
-                                while (isPlaying) {
-                                    pcmPlayer.write(data, mPlayOffset, mPrimePlaySize);
-                                    runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            playPercent = mPlayOffset / (float) data.length;
-                                            playView.setPlayPercent(playPercent);
-                                            tvDuration.setText(getFormatedLenght((int) (seconds * playView.getPlayPercent())));
-                                            if (mPlayOffset >= data.length) {
-                                                isPlaying = false;
-                                                o.setDrawableTop(R.mipmap.ic_cut_play);
-                                                mPlayOffset = 0;
-                                            }
-                                        }
-                                    });
-                                    mPlayOffset += mPrimePlaySize;
-                                }
-                            }
+        Observable.just(true)
+                .map(new Func1<Boolean, Boolean>() {
+                    @Override
+                    public Boolean call(Boolean aBoolean) {
+                        tvTopTitle.setText("试听");
+                        ctvFirst.setText("裁剪");
+                        ctvFirst.setDrawableTop(R.mipmap.ic_cut);
+                        ctvFirst.setOnClickListener(v -> {
+                            stop();
+                            CutActivity.this.isCut = true;
+                            setUI();
                         });
-                        threadPlay.start();
-                    } else {
-                        isPlaying = false;
-                        o.setText("试听");
-                        o.setDrawableTop(R.mipmap.ic_cut_play);
+                        ctvCut.setText("下一步");
+                        ctvCut.setDrawableTop(R.mipmap.ic_save);
+                        ctvCut.setOnClickListener(v -> {
+                            stop();
+                            ctvPlay.setText("试听");
+                            ctvPlay.setDrawableTop(R.mipmap.ic_cut_play);
+                            Intent intent = new Intent(CutActivity.this, SettingAudioActivity.class);
+                            startActivityForResult(intent, 3);
+                        });
+                        tvTip.setVisibility(View.INVISIBLE);
+                        findViewById(R.id.seekbar1).setVisibility(View.GONE);
+                        playView = new PlayView(CutActivity.this);
+                        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                        playView.setLayoutParams(layoutParams);
+//        cutContainer.removeAllViews();
+                        for (int i = 0; i < cutContainer.getChildCount(); i++) {
+                            cutContainer.getChildAt(i).setVisibility(View.GONE);
+                        }
+                        playView.setVisibility(View.VISIBLE);
+                        cutContainer.addView(playView);
+                        return aBoolean;
+                    }
+                })
+                .doOnSubscribe(new Action0() {
+                    @Override
+                    public void call() {
+                        showDialog("请稍等");
+                    }
+                })
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .map(new Func1<Boolean, Boolean>() {
+
+                    @Override
+                    public Boolean call(Boolean aBoolean) {
+                        calculateVolume();
+                        return aBoolean;
+                    }
+                })
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Subscriber<Boolean>() {
+                    @Override
+                    public void onCompleted() {
+                        dismissProgressDialog();
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onNext(Boolean aBoolean) {
+
+
+                        playView.setListVolume(list);
+                        //
+                        fileLength = getLength(base + "/mix.pcm");
+                        pcmPlayer = new PCMPlayer(0, 0, 0);
+                        mPrimePlaySize = pcmPlayer.getBufferSize() * 2;
+                        tvStart.setText(getFormatedLenght(0));
+                        tvEnd.setText(getFormatedLenght((int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f)));
+                        int seconds = (int) (FileUtils.getFileLength(base + "/mix.pcm") / 88200f);
+                        playPercent = 0;
+                        mPlayOffset = 0;
+                        tvDuration.setText(getFormatedLenght((int) (seconds * playPercent)));
+                        RxView.clicks(ctvPlay)
+                                .map(o -> ctvPlay)
+                                .throttleFirst(300, TimeUnit.MILLISECONDS)
+                                .subscribe(o -> {
+                                    if (!isPlaying) {
+                                        isPlaying = true;
+                                        o.setText("暂停");
+                                        o.setDrawableTop(R.mipmap.ic_cut_pause);
+                                        threadPlay = new Thread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                data = readSDFile(base + "/mix.pcm");
+                                                while (isPlaying) {
+                                                    pcmPlayer.write(data, mPlayOffset, mPrimePlaySize);
+                                                    runOnUiThread(new Runnable() {
+                                                        @Override
+                                                        public void run() {
+                                                            playPercent = mPlayOffset / (float) data.length;
+                                                            playView.setPlayPercent(playPercent);
+                                                            tvDuration.setText(getFormatedLenght((int) (seconds * playView.getPlayPercent())));
+                                                            if (mPlayOffset >= data.length) {
+                                                                playPercent = 0;
+                                                                playView.setPlayPercent(playPercent);
+                                                                isPlaying = false;
+                                                                o.setDrawableTop(R.mipmap.ic_cut_play);
+                                                                mPlayOffset = 0;
+                                                            }
+                                                        }
+                                                    });
+                                                    mPlayOffset += mPrimePlaySize;
+                                                }
+                                            }
+                                        });
+                                        threadPlay.start();
+                                    } else {
+                                        isPlaying = false;
+                                        o.setText("试听");
+                                        o.setDrawableTop(R.mipmap.ic_cut_play);
+                                    }
+                                });
                     }
                 });
+
     }
 
 
@@ -519,5 +566,14 @@ public class CutActivity extends BaseActivity {
     public void onBackPressed() {
         super.onBackPressed();
         stop();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 3 && resultCode == 3) {
+            setResult(2);
+            finish();
+        }
     }
 }
