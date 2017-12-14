@@ -345,6 +345,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
 
     private void rerecord() {
+        pbBg.setProgress(0);
         if (cutView != null) {
             cutView.clear();
         }
@@ -507,6 +508,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
     }
 
     private void pauseMp3() {
+        pbBg.setProgress(0);
         if (myMediaPlayer != null && myMediaPlayer.isPlaying()) {
             myMediaPlayer.pause();
             mediaPlayerStatus = 2;
@@ -524,6 +526,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
 
 
     private void stopMp3() {
+        pbBg.setProgress(0);
         if (myMediaPlayer != null) {
             if (myMediaPlayer.isPlaying()) {
                 myMediaPlayer.stop();
@@ -625,7 +628,7 @@ public class RecordActivity extends BaseActivity implements IRecordListener {
                     byte[] bytes = new byte[readSize];
                     RecordBgMusicUtil.getInstance().appendMusic(base + Config.tempBgFileName, bytes, currVolume, true);
                 } else {
-                    LogUtils.d("Config.bgFilePCM=" + Config.bgFilePCM);
+//                    LogUtils.d("Config.bgFilePCM=" + Config.bgFilePCM);
                     RecordBgMusicUtil.getInstance().appendMusic(base + Config.bgFilePCM, base + Config.tempBgFileName, FileUtils.getFileLength(base + Config.tempBgFileName), readSize, currVolume, true);
                 }
                 try {
